@@ -7,6 +7,7 @@ import { useSession } from "@/lib/session/SessionContext";
 import type { Message, Speaker } from "@/lib/session/types";
 import { getSpeechProvider } from "@/lib/speech";
 import { FlagButton } from "./FlagButton";
+import { Highlighted } from "./Highlighted";
 
 /**
  * Conversation as seen by `viewer`. Their own lines show what they said plus
@@ -52,12 +53,17 @@ function MessageRow({ message: m, viewer }: { message: Message; viewer: Speaker 
         } ${m.uncertain ? "ring-2 ring-amber-400" : ""}`}
       >
         {m.status === "pending" && !mine && <p className="italic text-[var(--fg-muted)]">{s.translating}</p>}
-        {primary && <p lang={mine ? m.original.lang : m.translated?.lang}>{primary}</p>}
+        {primary && (
+          <p lang={mine ? m.original.lang : m.translated?.lang}>
+            <Highlighted text={primary} lang={mine ? m.original.lang : (m.translated?.lang ?? viewerLang)} />
+          </p>
+        )}
 
         {m.status === "pending" && mine && <p className="mt-1 text-xs italic text-[var(--fg-muted)]">{s.translating}</p>}
         {m.status === "done" && secondary && (
           <p className="mt-1 border-t border-[var(--border)] pt-1 text-xs text-[var(--fg-muted)]">
-            <span className="font-medium">{secondaryLabel}:</span> {secondary}
+            <span className="font-medium">{secondaryLabel}:</span>{" "}
+            <Highlighted text={secondary} lang={mine ? (m.translated?.lang ?? viewerLang) : m.original.lang} />
           </p>
         )}
         {m.status === "error" && (
