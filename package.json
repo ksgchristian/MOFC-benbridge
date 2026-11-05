@@ -9,8 +9,10 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "eval": "tsx --env-file-if-exists=.env.local tests/translate.eval.ts",
-    "typecheck": "tsc --noEmit"
+    "eval": "npm run eval:translate && npm run eval:voice",
+    "typecheck": "tsc --noEmit",
+    "eval:translate": "tsx --env-file-if-exists=.env.local tests/translate.eval.ts",
+    "eval:voice": "tsx --env-file-if-exists=.env.local tests/voice.eval.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.6.0",
