@@ -3,9 +3,10 @@
 import { LANGUAGES } from "@/lib/languages";
 import { ui } from "@/lib/i18n/ui";
 import { useSession } from "@/lib/session/SessionContext";
-import { Composer } from "./Composer";
+import { Conversation } from "./Conversation";
 import { FormView } from "./FormView";
-import { Transcript } from "./Transcript";
+import { CheckIcon } from "./Icons";
+import { PaneHeader } from "./PaneHeader";
 
 export function NeighborPane() {
   const { langFor, state } = useSession();
@@ -13,20 +14,14 @@ export function NeighborPane() {
   const s = ui(lang);
 
   return (
-    <section lang={lang} className="flex min-h-0 flex-col gap-4 overflow-y-auto p-4">
-      <header className="flex items-baseline justify-between">
-        <h2 className="text-lg font-semibold">{s.neighborPane}</h2>
-        <span className="text-xs text-[var(--fg-muted)]">{LANGUAGES[lang].nativeName}</span>
-      </header>
-
-      <div className="space-y-2">
-        <h3 className="text-sm font-semibold">{s.conversation}</h3>
-        <Transcript viewer="neighbor" />
-        <Composer speaker="neighbor" />
-      </div>
-
-      {state.submitted && <p className="rounded-md bg-green-100 p-3 text-sm text-green-900 dark:bg-green-950 dark:text-green-200">{s.submitted}</p>}
-
+    <section lang={lang} className="flex min-h-0 flex-col gap-6 overflow-y-auto px-5 py-6 lg:border-r lg:border-[var(--separator)]">
+      <PaneHeader title={s.neighborPane} language={LANGUAGES[lang].nativeName} />
+      <Conversation viewer="neighbor" />
+      {state.submitted && (
+        <div className="card flex items-center gap-2 p-4 text-[15px] font-medium text-[var(--accent)]">
+          <CheckIcon /> {s.submitted}
+        </div>
+      )}
       <FormView viewer="neighbor" />
     </section>
   );

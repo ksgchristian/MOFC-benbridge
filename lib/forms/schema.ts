@@ -26,7 +26,13 @@ interface BaseField {
 export type FormField =
   | (BaseField & { type: "text" | "date" | "phone" })
   | (BaseField & { type: "number" })
-  | (BaseField & { type: "money" })
+  | (BaseField & {
+      type: "money";
+      /** What the amount must be. Drafts are converted to this period in code. */
+      period?: "monthly";
+      /** Before taxes (gross) or after (net). Drafts with the other basis are re-routed or marked unclear. */
+      basis?: "gross" | "net";
+    })
   | (BaseField & { type: "yesno" })
   | (BaseField & { type: "select"; options: SelectOption[] });
 

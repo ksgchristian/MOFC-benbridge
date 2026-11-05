@@ -7,42 +7,84 @@ import { allFields } from "@/lib/forms/schema";
 
 const start = () => initialSession(snapSampleForm.id);
 
-describe("session reducer", () => {
-  it("changing a value clears the neighbor's confirmation", () => {
-    let s = sessionReducer(start(), { type: "SET_FIELD", fieldId: "fullName", value: "A" });
-    s = sessionReducer(s, { type: "CONFIRM_FIELD", fieldId: "fullName", confirmed: true });
-    expect(s.fields.fullName.confirmed).toBe(true);
-    s = sessionReducer(s, { type: "SET_FIELD", fieldId: "fullName", value: "B" });
-    expect(s.fields.fullName).toEqual({ value: "B", confirmed: false });
+const propose = (fieldId: string, value: string, extra: Partial<{ origin: "claude" | "navigator"; unclear: boolean; ask: string }> = {}) =>
+  ({ type: "PROPOSE_VALUE", fieldId, pending: { value, origin: "claude", unclear: false, ask: "", ...extra } }) as const;
+
+describe("draft → neighbor Yes/No → navigator Confirm", () => {
+  it("navigator can't confirm until the neighbor says Yes", () => {
+    let s = sessionReducer(start(), propose("householdSize", "3"));
+    s = sessionReducer(s, { type: "NAVIGATOR_CONFIRM", fieldId: "householdSize" });
+    expect(s.fields.householdSize.confirmed).toBe(false);
+
+    s = sessionReducer(s, { type: "NEIGHBOR_ANSWER", fieldId: "householdSize", answer: "no" });
+    s = sessionReducer(s, { type: "NAVIGATOR_CONFIRM", fieldId: "householdSize" });
+    expect(s.fields.householdSize.confirmed).toBe(false);
+
+    s = sessionReducer(s, { type: "NEIGHBOR_ANSWER", fieldId: "householdSize", answer: "yes" });
+    s = sessionReducer(s, { type: "NAVIGATOR_CONFIRM", fieldId: "householdSize" });
+    expect(s.fields.householdSize).toEqual({ value: "3", confirmed: true });
   });
 
-  it("cannot confirm an empty field", () => {
-    const s = sessionReducer(start(), { type: "CONFIRM_FIELD", fieldId: "fullName", confirmed: true });
-    expect(s.fields.fullName).toBeUndefined();
+  it("unclear drafts can't be answered or confirmed", () => {
+    let s = sessionReducer(start(), propose("grossMonthlyIncome", "500", { unclear: true, ask: "per week or per month?" }));
+    s = sessionReducer(s, { type: "NEIGHBOR_ANSWER", fieldId: "grossMonthlyIncome", answer: "yes" });
+    expect(s.fields.grossMonthlyIncome.neighborAnswer).toBeUndefined();
+    s = sessionReducer(s, { type: "NAVIGATOR_CONFIRM", fieldId: "grossMonthlyIncome" });
+    expect(s.fields.grossMonthlyIncome.confirmed).toBe(false);
+  });
+
+  it("a new value clears the neighbor's answer but keeps the old confirmed value until re-confirmed", () => {
+    let s = sessionReducer(start(), propose("householdSize", "3"));
+    s = sessionReducer(s, { type: "NEIGHBOR_ANSWER", fieldId: "householdSize", answer: "yes" });
+    s = sessionReducer(s, { type: "NAVIGATOR_CONFIRM", fieldId: "householdSize" });
+    s = sessionReducer(s, propose("householdSize", "4", { origin: "navigator" }));
+    expect(s.fields.householdSize).toMatchObject({ value: "3", confirmed: true, pending: { value: "4" } });
+    expect(s.fields.householdSize.neighborAnswer).toBeUndefined();
+    expect(submitReadiness(s, snapSampleForm).pending).toContain("householdSize");
+  });
+
+  it("discard drops the pending value", () => {
+    let s = sessionReducer(start(), propose("householdSize", "3"));
+    s = sessionReducer(s, { type: "DISCARD_PENDING", fieldId: "householdSize" });
+    expect(s.fields.householdSize.pending).toBeUndefined();
   });
 
   it("freezes the form after submit", () => {
     let s = sessionReducer(start(), { type: "SUBMIT" });
-    s = sessionReducer(s, { type: "SET_FIELD", fieldId: "fullName", value: "X" });
+    s = sessionReducer(s, propose("fullName", "X"));
     expect(s.fields.fullName).toBeUndefined();
   });
 });
 
+describe("current question", () => {
+  it("is shared state that can be set, moved and cleared, and resets with the session", () => {
+    let s = sessionReducer(start(), { type: "SET_ACTIVE_FIELD", fieldId: "householdSize" });
+    expect(s.activeFieldId).toBe("householdSize");
+    s = sessionReducer(s, { type: "SET_ACTIVE_FIELD", fieldId: "grossMonthlyIncome" });
+    expect(s.activeFieldId).toBe("grossMonthlyIncome");
+    s = sessionReducer(s, { type: "SET_ACTIVE_FIELD", fieldId: null });
+    expect(s.activeFieldId).toBeNull();
+    s = sessionReducer(sessionReducer(s, { type: "SET_ACTIVE_FIELD", fieldId: "fullName" }), { type: "RESET" });
+    expect(s.activeFieldId).toBeNull();
+  });
+});
+
 describe("submit guardrail", () => {
-  it("blocks submit until required fields are filled and everything is confirmed", () => {
+  it("blocks submit until every value is answered Yes and confirmed", () => {
     let s = start();
     expect(submitReadiness(s, snapSampleForm).ready).toBe(false);
 
     s = sessionReducer(s, { type: "LOAD_VALUES", values: sampleNeighbors[0].values });
-    const r = submitReadiness(s, snapSampleForm);
-    expect(r.missingRequired).toEqual([]);
-    expect(r.unconfirmed.length).toBeGreaterThan(0);
+    let r = submitReadiness(s, snapSampleForm);
+    expect(r.pending.length).toBe(Object.keys(sampleNeighbors[0].values).length);
     expect(r.ready).toBe(false);
 
     for (const id of Object.keys(sampleNeighbors[0].values)) {
-      s = sessionReducer(s, { type: "CONFIRM_FIELD", fieldId: id, confirmed: true });
+      s = sessionReducer(s, { type: "NEIGHBOR_ANSWER", fieldId: id, answer: "yes" });
+      s = sessionReducer(s, { type: "NAVIGATOR_CONFIRM", fieldId: id });
     }
-    expect(submitReadiness(s, snapSampleForm).ready).toBe(true);
+    r = submitReadiness(s, snapSampleForm);
+    expect(r).toEqual({ ready: true, missingRequired: [], pending: [] });
   });
 });
 

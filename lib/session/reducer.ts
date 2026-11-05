@@ -1,6 +1,22 @@
 import { allFields, type FormSchema } from "@/lib/forms/schema";
 import { DEFAULT_NEIGHBOR_LANG } from "@/lib/languages";
-import type { SessionAction, SessionState } from "./types";
+import type { FieldState, SessionAction, SessionState } from "./types";
+
+function field(state: SessionState, id: string): FieldState {
+  return state.fields[id] ?? { value: "", confirmed: false };
+}
+
+function withField(state: SessionState, id: string, fs: FieldState): SessionState {
+  return { ...state, fields: { ...state.fields, [id]: fs } };
+}
+
+/**
+ * Guardrail: only the navigator confirms, and only after the neighbor said
+ * Yes to that exact pending value and nothing about it is unclear.
+ */
+export function canConfirm(fs: FieldState): boolean {
+  return !!fs.pending && !fs.pending.unclear && fs.neighborAnswer === "yes" && fs.pending.value !== "";
+}
 
 export function initialSession(formId: string): SessionState {
   return {
@@ -10,6 +26,7 @@ export function initialSession(formId: string): SessionState {
     fields: {},
     flags: [],
     submitted: false,
+    activeFieldId: null,
   };
 }
 
@@ -42,35 +59,60 @@ export function sessionReducer(state: SessionState, action: SessionAction): Sess
         messages: state.messages.map((m) => (m.id === action.id ? { ...m, status: "error", error: action.error } : m)),
       };
 
-    case "SET_FIELD": {
+    case "PROPOSE_VALUE": {
       if (state.submitted) return state;
-      const prev = state.fields[action.fieldId];
-      if (prev?.value === action.value) return state;
-      // Any change invalidates the neighbor's confirmation.
-      return { ...state, fields: { ...state.fields, [action.fieldId]: { value: action.value, confirmed: false } } };
+      const prev = field(state, action.fieldId);
+      const value = action.pending.value.trim();
+      // Same as what's already confirmed and nothing to ask: nothing to do.
+      if (prev.confirmed && prev.value === value && !action.pending.unclear && !prev.pending) return state;
+      // Re-proposing the identical pending value keeps the neighbor's answer.
+      if (prev.pending && prev.pending.value === value && prev.pending.unclear === action.pending.unclear) return state;
+      return withField(state, action.fieldId, { ...prev, pending: { ...action.pending, value }, neighborAnswer: undefined });
     }
 
     case "LOAD_VALUES": {
       if (state.submitted) return state;
-      const fields = { ...state.fields };
+      let next = state;
       for (const [id, value] of Object.entries(action.values)) {
-        fields[id] = { value, confirmed: false };
+        next = sessionReducer(next, { type: "PROPOSE_VALUE", fieldId: id, pending: { value, origin: "navigator", unclear: false, ask: "" } });
       }
-      return { ...state, fields };
+      return next;
     }
 
-    case "CONFIRM_FIELD": {
+    case "NEIGHBOR_ANSWER": {
       if (state.submitted) return state;
       const prev = state.fields[action.fieldId];
-      if (!prev || prev.value.trim() === "") return state; // nothing to confirm
-      return { ...state, fields: { ...state.fields, [action.fieldId]: { ...prev, confirmed: action.confirmed } } };
+      if (!prev?.pending || prev.pending.unclear) return state; // nothing to answer, or the navigator must ask first
+      return withField(state, action.fieldId, { ...prev, neighborAnswer: action.answer });
     }
+
+    case "NAVIGATOR_CONFIRM": {
+      if (state.submitted) return state;
+      const prev = state.fields[action.fieldId];
+      if (!prev || !canConfirm(prev)) return state;
+      return withField(state, action.fieldId, { value: prev.pending!.value, confirmed: true });
+    }
+
+    case "DISCARD_PENDING": {
+      const prev = state.fields[action.fieldId];
+      if (!prev?.pending || state.submitted) return state;
+      return withField(state, action.fieldId, { value: prev.value, confirmed: prev.confirmed });
+    }
+
+    case "SET_MESSAGE_DRAFTS":
+      return {
+        ...state,
+        messages: state.messages.map((m) => (m.id === action.id ? { ...m, draftedFields: action.fieldIds } : m)),
+      };
 
     case "ADD_FLAG":
       return { ...state, flags: [...state.flags, action.flag] };
 
     case "REMOVE_FLAG":
       return { ...state, flags: state.flags.filter((f) => f.id !== action.id) };
+
+    case "SET_ACTIVE_FIELD":
+      return state.activeFieldId === action.fieldId ? state : { ...state, activeFieldId: action.fieldId };
 
     case "SUBMIT":
       return state.submitted ? state : { ...state, submitted: true };
@@ -82,22 +124,23 @@ export function sessionReducer(state: SessionState, action: SessionAction): Sess
 
 export interface SubmitReadiness {
   ready: boolean;
+  /** Required fields with no confirmed value. */
   missingRequired: string[];
-  unconfirmed: string[];
+  /** Fields with a value still waiting for the neighbor's Yes and the navigator's Confirm. */
+  pending: string[];
 }
 
 /**
  * Guardrail: the (mock) submit is only allowed when every required field has
- * a value AND every field with a value has been confirmed by the neighbor.
+ * a confirmed value and nothing is left pending.
  */
 export function submitReadiness(state: SessionState, form: FormSchema): SubmitReadiness {
   const missingRequired: string[] = [];
-  const unconfirmed: string[] = [];
-  for (const field of allFields(form)) {
-    const fs = state.fields[field.id];
-    const hasValue = !!fs && fs.value.trim() !== "";
-    if (field.required && !hasValue) missingRequired.push(field.id);
-    if (hasValue && !fs.confirmed) unconfirmed.push(field.id);
+  const pending: string[] = [];
+  for (const f of allFields(form)) {
+    const fs = state.fields[f.id];
+    if (fs?.pending) pending.push(f.id);
+    if (f.required && !(fs?.confirmed && fs.value.trim() !== "")) missingRequired.push(f.id);
   }
-  return { ready: missingRequired.length === 0 && unconfirmed.length === 0, missingRequired, unconfirmed };
+  return { ready: missingRequired.length === 0 && pending.length === 0, missingRequired, pending };
 }

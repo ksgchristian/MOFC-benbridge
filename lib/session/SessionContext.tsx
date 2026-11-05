@@ -1,8 +1,9 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useReducer, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, type ReactNode } from "react";
 import { NAVIGATOR_LANG, type LangCode } from "@/lib/languages";
 import { translate } from "@/lib/translate/client";
+import { requestDrafts } from "@/lib/draft/client";
 import type { FormSchema } from "@/lib/forms/schema";
 import { initialSession, sessionReducer } from "./reducer";
 import type { Flag, FlagTarget, SessionAction, SessionState, Speaker } from "./types";
@@ -31,21 +32,57 @@ export function SessionProvider({ form, children }: { form: FormSchema; children
     [state.neighborLang],
   );
 
-  const runTranslation = useCallback(async (id: string, text: string, from: LangCode, to: LangCode) => {
-    try {
-      const res = await translate(text, from, to);
-      dispatch({
-        type: "RESOLVE_MESSAGE",
-        id,
-        translated: { lang: to, text: res.translation },
-        uncertain: res.uncertain,
-        uncertaintyNote: res.uncertaintyNote,
-        glossaryHits: res.glossaryHits,
-      });
-    } catch (err) {
-      dispatch({ type: "FAIL_MESSAGE", id, error: err instanceof Error ? err.message : "Translation failed." });
-    }
-  }, []);
+  // Latest messages, for the few lines of context sent with each draft request.
+  const messagesRef = useRef(state.messages);
+  useEffect(() => {
+    messagesRef.current = state.messages;
+  }, [state.messages]);
+
+  /** Ask Claude to draft form values from this line. Failures are silent: the message still stands. */
+  const runDrafting = useCallback(
+    async (id: string, speaker: Speaker, text: string, lang: LangCode) => {
+      const context = messagesRef.current
+        .filter((m) => m.id !== id)
+        .slice(-4)
+        .map((m) => ({ speaker: m.speaker, text: m.original.text }));
+      try {
+        const { drafts } = await requestDrafts(form.id, speaker, lang, text, context);
+        for (const d of drafts) {
+          dispatch({
+            type: "PROPOSE_VALUE",
+            fieldId: d.fieldId,
+            pending: { value: d.value, origin: "claude", unclear: d.unclear, ask: d.ask },
+          });
+        }
+        if (drafts.length) dispatch({ type: "SET_MESSAGE_DRAFTS", id, fieldIds: drafts.map((d) => d.fieldId) });
+      } catch {
+        // Drafting is a helper; the navigator can still type the value.
+      }
+    },
+    [form.id],
+  );
+
+  const runTranslation = useCallback(
+    async (id: string, speaker: Speaker, text: string, from: LangCode, to: LangCode) => {
+      try {
+        const res = await translate(text, from, to);
+        dispatch({
+          type: "RESOLVE_MESSAGE",
+          id,
+          translated: { lang: to, text: res.translation },
+          uncertain: res.uncertain,
+          uncertaintyNote: res.uncertaintyNote,
+          glossaryHits: res.glossaryHits,
+        });
+      } catch (err) {
+        dispatch({ type: "FAIL_MESSAGE", id, error: err instanceof Error ? err.message : "Translation failed." });
+        return;
+      }
+      // Translate → draft field → (neighbor Yes/No) → navigator Confirm.
+      await runDrafting(id, speaker, text, from);
+    },
+    [runDrafting],
+  );
 
   const sendMessage = useCallback(
     async (speaker: Speaker, text: string) => {
@@ -58,7 +95,7 @@ export function SessionProvider({ form, children }: { form: FormSchema; children
         type: "ADD_MESSAGE",
         message: { id, speaker, createdAt: Date.now(), original: { lang: from, text: trimmed }, status: "pending" },
       });
-      await runTranslation(id, trimmed, from, to);
+      await runTranslation(id, speaker, trimmed, from, to);
     },
     [langFor, runTranslation],
   );
@@ -68,7 +105,7 @@ export function SessionProvider({ form, children }: { form: FormSchema; children
       const msg = state.messages.find((m) => m.id === id);
       if (!msg) return;
       const to = langFor(msg.speaker === "navigator" ? "neighbor" : "navigator");
-      await runTranslation(id, msg.original.text, msg.original.lang, to);
+      await runTranslation(id, msg.speaker, msg.original.text, msg.original.lang, to);
     },
     [state.messages, langFor, runTranslation],
   );

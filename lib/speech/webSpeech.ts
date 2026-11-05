@@ -46,16 +46,18 @@ export const webSpeech: SpeechProvider = {
     const rec = new Ctor();
     rec.lang = locale;
     rec.interimResults = true;
-    rec.continuous = false;
+    // Keep listening through short pauses; the speaker taps Stop (Chrome also ends after a long silence).
+    rec.continuous = true;
 
     rec.onresult = (e) => {
+      // Rebuild the whole utterance each time so earlier phrases aren't lost.
       let text = "";
-      let isFinal = false;
-      for (let i = e.resultIndex; i < e.results.length; i++) {
+      let allFinal = true;
+      for (let i = 0; i < e.results.length; i++) {
         text += e.results[i][0].transcript;
-        if (e.results[i].isFinal) isFinal = true;
+        if (!e.results[i].isFinal) allFinal = false;
       }
-      onResult(text, isFinal);
+      onResult(text.trim(), allFinal);
     };
     rec.onerror = (e) => {
       if (e.error !== "no-speech" && e.error !== "aborted") onError(`Voice input error: ${e.error}`);
