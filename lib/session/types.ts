@@ -62,6 +62,8 @@ export interface SessionState {
   fields: Record<string, FieldState>;
   flags: Flag[];
   submitted: boolean;
+  /** The question both sides are on right now (set by double-tapping a form row). */
+  activeFieldId: string | null;
 }
 
 export type SessionAction =
@@ -76,5 +78,6 @@ export type SessionAction =
   | { type: "SET_MESSAGE_DRAFTS"; id: string; fieldIds: string[] }
   | { type: "ADD_FLAG"; flag: Flag }
   | { type: "REMOVE_FLAG"; id: string }
+  | { type: "SET_ACTIVE_FIELD"; fieldId: string | null }
   | { type: "SUBMIT" }
   | { type: "RESET" };

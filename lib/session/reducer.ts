@@ -26,6 +26,7 @@ export function initialSession(formId: string): SessionState {
     fields: {},
     flags: [],
     submitted: false,
+    activeFieldId: null,
   };
 }
 
@@ -109,6 +110,9 @@ export function sessionReducer(state: SessionState, action: SessionAction): Sess
 
     case "REMOVE_FLAG":
       return { ...state, flags: state.flags.filter((f) => f.id !== action.id) };
+
+    case "SET_ACTIVE_FIELD":
+      return state.activeFieldId === action.fieldId ? state : { ...state, activeFieldId: action.fieldId };
 
     case "SUBMIT":
       return state.submitted ? state : { ...state, submitted: true };

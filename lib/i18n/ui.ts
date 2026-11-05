@@ -35,7 +35,7 @@ const en = {
   exportFlags: "Export flags (JSON)",
   noFlags: "No flags yet.",
   reset: "Reset session",
-  noMessages: "No messages yet.",
+  noMessages: "Tap the mic or type to start. Each line is translated for the other side.",
   select: "Select…",
   yes: "Yes",
   no: "No",
@@ -63,6 +63,8 @@ const en = {
   answeredYes: "You said Yes",
   answeredNo: "You said No",
   pending: "Pending",
+  currentQuestion: "Current question",
+  doubleTapHint: "Double-tap a question to mark where you are. It lights up on both sides.",
 };
 
 export type UiStrings = typeof en;
@@ -101,7 +103,7 @@ const es: UiStrings = {
   exportFlags: "Exportar marcas (JSON)",
   noFlags: "Sin marcas.",
   reset: "Reiniciar",
-  noMessages: "Todavía no hay mensajes.",
+  noMessages: "Toque el micrófono o escriba para empezar. Cada mensaje se traduce para la otra persona.",
   select: "Seleccione…",
   yes: "Sí",
   no: "No",
@@ -127,6 +129,8 @@ const es: UiStrings = {
   answeredYes: "Usted dijo Sí",
   answeredNo: "Usted dijo No",
   pending: "Pendiente",
+  currentQuestion: "Pregunta actual",
+  doubleTapHint: "Toque dos veces una pregunta para marcar dónde están. Se ilumina en ambos lados.",
 };
 
 const STRINGS: Record<LangCode, UiStrings> = { en, es };

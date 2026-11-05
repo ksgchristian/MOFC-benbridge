@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ui, type UiStrings } from "@/lib/i18n/ui";
 import { displayValue } from "@/lib/forms/display";
 import { YES_NO_LABELS, type FormField } from "@/lib/forms/schema";
@@ -11,6 +11,7 @@ import { useSession } from "@/lib/session/SessionContext";
 import type { FieldState, Speaker } from "@/lib/session/types";
 import { FlagButton } from "./FlagButton";
 import { Highlighted } from "./Highlighted";
+import { AlertIcon, CheckIcon, SparkleIcon } from "./Icons";
 
 /**
  * The same application rendered for either side.
@@ -18,6 +19,8 @@ import { Highlighted } from "./Highlighted";
  *   only one who can Confirm a pending value into the form.
  * - neighbor: labels in their language; read-only values; answers Sí/No on
  *   each pending value. That is the neighbor's only form action.
+ * Either side can double-tap a question to mark it as the current one; it
+ * lights up on both sides.
  */
 export function FormView({ viewer }: { viewer: Speaker }) {
   const { form, state, langFor } = useSession();
@@ -26,20 +29,24 @@ export function FormView({ viewer }: { viewer: Speaker }) {
   const labels = useFormLabels(form, lang);
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-base font-semibold">{labels.t("title", form.title)}</h3>
-        <p className="text-xs text-[var(--fg-muted)]">{labels.t("disclaimer", form.disclaimer)}</p>
-        {labels.loading && <p className="text-xs italic text-[var(--fg-muted)]">{s.translating}</p>}
-        {labels.error && <p className="text-xs text-red-600">{labels.error}</p>}
+    <div className="space-y-6">
+      <div className="space-y-1 px-1">
+        <p className="text-[13px] font-medium uppercase tracking-wide text-[var(--fg-muted)]">{s.form}</p>
+        <h3 className="text-[22px] font-bold leading-tight tracking-tight">{labels.t("title", form.title)}</h3>
+        <p className="text-[13px] text-[var(--fg-muted)]">{labels.t("disclaimer", form.disclaimer)}</p>
+        <p className="text-[12px] text-[var(--fg-muted)]">{s.doubleTapHint}</p>
+        {labels.loading && <p className="text-[13px] text-[var(--fg-muted)]">{s.translating}</p>}
+        {labels.error && <p className="text-[13px] text-[var(--danger)]">{labels.error}</p>}
       </div>
 
       {form.sections.map((section) => (
-        <fieldset key={section.id} className="space-y-3 rounded-md border border-[var(--border)] p-3" disabled={state.submitted}>
-          <legend className="px-1 text-sm font-medium">{labels.t(`section.${section.id}`, section.title)}</legend>
-          {section.fields.map((field) => (
-            <FieldRow key={field.id} field={field} viewer={viewer} labels={labels} />
-          ))}
+        <fieldset key={section.id} disabled={state.submitted} className="min-w-0">
+          <legend className="group-title">{labels.t(`section.${section.id}`, section.title)}</legend>
+          <div className="card hairline overflow-hidden">
+            {section.fields.map((field) => (
+              <FieldRow key={field.id} field={field} viewer={viewer} labels={labels} />
+            ))}
+          </div>
         </fieldset>
       ))}
     </div>
@@ -48,8 +55,10 @@ export function FormView({ viewer }: { viewer: Speaker }) {
 
 type Labels = ReturnType<typeof useFormLabels>;
 
+const INTERACTIVE = "input, select, textarea, button, a, label";
+
 function FieldRow({ field, viewer, labels }: { field: FormField; viewer: Speaker; labels: Labels }) {
-  const { state, langFor, addFlag } = useSession();
+  const { state, langFor, addFlag, dispatch } = useSession();
   const lang = langFor(viewer);
   const s = ui(lang);
   const fs: FieldState = state.fields[field.id] ?? { value: "", confirmed: false };
@@ -57,28 +66,59 @@ function FieldRow({ field, viewer, labels }: { field: FormField; viewer: Speaker
   const label = labels.t(labelKey, field.label);
   const help = labels.t(`field.${field.id}.help`, field.help);
   const inputId = `${viewer}-${field.id}`;
+  const active = state.activeFieldId === field.id;
+
+  // Double-tap (touch) or double-click (mouse) marks this as the current question.
+  const rowRef = useRef<HTMLDivElement>(null);
+  const lastTap = useRef(0);
+  const onPointerUp = (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest(INTERACTIVE)) return; // don't hijack inputs and buttons
+    const now = e.timeStamp;
+    if (now - lastTap.current < 350) {
+      dispatch({ type: "SET_ACTIVE_FIELD", fieldId: active ? null : field.id });
+      lastTap.current = 0;
+    } else {
+      lastTap.current = now;
+    }
+  };
+
+  // When this becomes the current question, bring it into view on both sides.
+  useEffect(() => {
+    if (active) rowRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [active]);
 
   return (
-    <div className="space-y-1.5">
+    <div
+      ref={rowRef}
+      onPointerUp={onPointerUp}
+      aria-current={active ? "step" : undefined}
+      className={`relative select-none space-y-2 px-4 py-3.5 transition-colors ${active ? "bg-[var(--accent-soft)]" : ""}`}
+    >
+      {active && <span className="pointer-events-none absolute inset-0 rounded-[inherit] ring-2 ring-inset ring-[var(--accent)]" aria-hidden />}
       <div className="flex items-start justify-between gap-2">
-        <label htmlFor={inputId} className="text-sm">
-          {label}
-          {field.required && <span className="text-red-600"> *</span>}
-          {labels.isMachine(labelKey) && (
-            <span className="ml-1 rounded bg-[var(--muted)] px-1 text-[10px] uppercase text-[var(--fg-muted)]">AI</span>
+        <div className="min-w-0 space-y-0.5">
+          {active && (
+            <span className="chip mb-1 bg-[var(--accent)] text-[var(--on-accent)]">{s.currentQuestion}</span>
           )}
-        </label>
+          <label htmlFor={inputId} className="block text-[15px] font-medium leading-snug">
+            {label}
+            {field.required && <span className="text-[var(--danger)]"> *</span>}
+            {labels.isMachine(labelKey) && <span className="chip ml-1.5 !h-[18px] bg-[var(--fill)] !text-[10px] text-[var(--fg-muted)]">AI</span>}
+          </label>
+          {help && <p className="text-[13px] leading-snug text-[var(--fg-muted)]">{help}</p>}
+        </div>
         {viewer === "neighbor" && lang !== "en" && (
           <FlagButton strings={s} onFlag={(note) => addFlag(viewer, { kind: "field", fieldId: field.id }, field.label.en, label, note)} />
         )}
       </div>
-      {help && <p className="text-xs text-[var(--fg-muted)]">{help}</p>}
 
-      {viewer === "navigator" ? (
-        <NavigatorField field={field} fs={fs} inputId={inputId} s={s} labels={labels} />
-      ) : (
-        <NeighborField field={field} fs={fs} inputId={inputId} s={s} lang={lang} labels={labels} />
-      )}
+      <div className="select-text">
+        {viewer === "navigator" ? (
+          <NavigatorField field={field} fs={fs} inputId={inputId} s={s} labels={labels} />
+        ) : (
+          <NeighborField field={field} fs={fs} inputId={inputId} s={s} lang={lang} labels={labels} />
+        )}
+      </div>
     </div>
   );
 }
@@ -86,8 +126,8 @@ function FieldRow({ field, viewer, labels }: { field: FormField; viewer: Speaker
 function ConfirmedValue({ field, fs, lang, labels, s }: { field: FormField; fs: FieldState; lang: LangCode; labels: Labels; s: UiStrings }) {
   if (!fs.confirmed || !fs.value) return null;
   return (
-    <p className="text-sm text-green-700 dark:text-green-400">
-      ✓ {s.confirmed}: <span className="font-medium">{displayValue(field, fs.value, lang, labels.t)}</span>
+    <p className="flex items-center gap-1.5 text-[13px] text-[var(--accent)]">
+      <CheckIcon size={14} /> {s.confirmed}: <span className="font-semibold">{displayValue(field, fs.value, lang, labels.t)}</span>
     </p>
   );
 }
@@ -110,36 +150,32 @@ function NavigatorField({ field, fs, inputId, s, labels }: { field: FormField; f
       <ConfirmedValue field={field} fs={fs} lang="en" labels={labels} s={s} />
 
       {p && (
-        <div className={`space-y-1.5 rounded-md border p-2 text-sm ${p.unclear ? "border-amber-400 bg-amber-50 dark:bg-amber-950/40" : "border-[var(--border)] bg-[var(--muted)]"}`}>
+        <div className={`space-y-2.5 rounded-xl p-3 ${p.unclear ? "bg-[var(--warn-soft)]" : "bg-[var(--fill)]"}`}>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded bg-[var(--surface)] px-1.5 py-0.5 text-[11px] text-[var(--fg-muted)]">
-              {p.origin === "claude" ? `✎ ${s.draftedFromConversation}` : s.enteredByNavigator}
+            <span className="chip bg-[var(--surface)] text-[var(--fg-muted)]">
+              {p.origin === "claude" && <SparkleIcon size={12} />}
+              {p.origin === "claude" ? s.draftedFromConversation : s.enteredByNavigator}
             </span>
-            <span className="font-medium">{shown ? <Highlighted text={shown} lang="en" /> : "—"}</span>
+            <span className="text-[17px] font-semibold">{shown ? <Highlighted text={shown} lang="en" /> : "—"}</span>
           </div>
           {p.unclear ? (
-            <p className="text-amber-800 dark:text-amber-300">
-              ⚠ {s.unclearAsk} {p.ask}
+            <p className="flex items-start gap-1.5 text-[13px] font-medium text-[var(--warn)]">
+              <AlertIcon size={14} className="mt-0.5 shrink-0" /> {s.unclearAsk} {p.ask}
             </p>
           ) : (
-            <p className={`text-xs ${fs.neighborAnswer === "no" ? "text-red-600" : fs.neighborAnswer === "yes" ? "text-green-700 dark:text-green-400" : "text-[var(--fg-muted)]"}`}>
-              {fs.neighborAnswer === "yes" ? `✓ ${s.neighborSaidYes}` : fs.neighborAnswer === "no" ? `✕ ${s.neighborSaidNo}` : s.waitingForNeighbor}
+            <p
+              className={`text-[13px] font-medium ${
+                fs.neighborAnswer === "no" ? "text-[var(--danger)]" : fs.neighborAnswer === "yes" ? "text-[var(--accent)]" : "text-[var(--fg-muted)]"
+              }`}
+            >
+              {fs.neighborAnswer === "yes" ? s.neighborSaidYes : fs.neighborAnswer === "no" ? s.neighborSaidNo : s.waitingForNeighbor}
             </p>
           )}
           <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={!canConfirm(fs)}
-              onClick={() => dispatch({ type: "NAVIGATOR_CONFIRM", fieldId: field.id })}
-              className="rounded-md bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
-            >
-              {s.confirm}
+            <button type="button" disabled={!canConfirm(fs)} onClick={() => dispatch({ type: "NAVIGATOR_CONFIRM", fieldId: field.id })} className="btn btn-sm btn-primary">
+              <CheckIcon size={14} /> {s.confirm}
             </button>
-            <button
-              type="button"
-              onClick={() => dispatch({ type: "DISCARD_PENDING", fieldId: field.id })}
-              className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm hover:bg-[var(--surface)]"
-            >
+            <button type="button" onClick={() => dispatch({ type: "DISCARD_PENDING", fieldId: field.id })} className="btn btn-sm btn-plain">
               {s.discard}
             </button>
           </div>
@@ -171,41 +207,44 @@ function NeighborField({
 
   if (!p) {
     const shown = fs.confirmed ? displayValue(field, fs.value, lang, labels.t) : "";
-    return (
-      <output id={inputId} className={`block min-h-9 rounded-md bg-[var(--muted)] px-3 py-2 text-sm ${shown ? "" : "text-[var(--fg-muted)]"}`}>
-        {shown ? `✓ ${shown}` : s.empty}
+    return shown ? (
+      <output id={inputId} className="flex items-center gap-1.5 text-[17px] font-semibold">
+        <CheckIcon size={16} className="text-[var(--accent)]" /> {shown}
+      </output>
+    ) : (
+      <output id={inputId} className="block text-[15px] text-[var(--fg-muted)]">
+        {s.empty}
       </output>
     );
   }
 
   const shown = displayValue(field, p.value, lang, labels.t);
   return (
-    <div id={inputId} className="space-y-2 rounded-md border border-[var(--accent)] p-2">
-      <p className="text-base font-medium">{shown ? <Highlighted text={shown} lang={lang} /> : "—"}</p>
+    <div id={inputId} className="space-y-3 rounded-xl bg-[var(--fill)] p-3">
+      <p className="text-[20px] font-semibold leading-snug">{shown ? <Highlighted text={shown} lang={lang} /> : "—"}</p>
       {p.unclear ? (
-        <p className="text-sm text-[var(--fg-muted)]">{s.navigatorWillAsk}</p>
+        <p className="text-[13px] text-[var(--fg-muted)]">{s.navigatorWillAsk}</p>
       ) : (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm">{s.isThisRight}</span>
-          {(["yes", "no"] as const).map((a) => (
-            <button
-              key={a}
-              type="button"
-              aria-pressed={fs.neighborAnswer === a}
-              onClick={() => dispatch({ type: "NEIGHBOR_ANSWER", fieldId: field.id, answer: a })}
-              className={`min-w-16 rounded-md px-4 py-2 text-sm font-semibold ${
-                fs.neighborAnswer === a
-                  ? a === "yes"
-                    ? "bg-green-600 text-white"
-                    : "bg-red-600 text-white"
-                  : a === "yes"
-                    ? "border-2 border-green-600 text-green-700 dark:text-green-400"
-                    : "border-2 border-red-600 text-red-700 dark:text-red-400"
-              }`}
-            >
-              {a === "yes" ? s.yes : s.no}
-            </button>
-          ))}
+          <span className="mr-1 text-[15px]">{s.isThisRight}</span>
+          <button
+            type="button"
+            aria-pressed={fs.neighborAnswer === "yes"}
+            onClick={() => dispatch({ type: "NEIGHBOR_ANSWER", fieldId: field.id, answer: "yes" })}
+            className={`btn min-w-20 ${fs.neighborAnswer === "yes" ? "btn-primary" : "btn-tinted"}`}
+          >
+            {fs.neighborAnswer === "yes" && <CheckIcon size={15} />} {s.yes}
+          </button>
+          <button
+            type="button"
+            aria-pressed={fs.neighborAnswer === "no"}
+            onClick={() => dispatch({ type: "NEIGHBOR_ANSWER", fieldId: field.id, answer: "no" })}
+            className={`btn min-w-20 ${
+              fs.neighborAnswer === "no" ? "bg-[var(--danger)] text-white" : "bg-[var(--danger-soft)] text-[var(--danger)]"
+            }`}
+          >
+            {s.no}
+          </button>
         </div>
       )}
     </div>
@@ -213,8 +252,6 @@ function NeighborField({
 }
 
 /* ---------------- Inputs ---------------- */
-
-const inputClass = "w-full min-w-0 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm";
 
 /**
  * Navigator input. Text-like inputs propose on blur or Enter (not every
@@ -234,7 +271,7 @@ function FieldInput({ id, field, initial, onCommit }: { id: string; field: FormF
     return (
       <select
         id={id}
-        className={inputClass}
+        className="field"
         value={v}
         onChange={(e) => {
           setV(e.target.value);
@@ -255,7 +292,7 @@ function FieldInput({ id, field, initial, onCommit }: { id: string; field: FormF
   return (
     <input
       id={id}
-      className={inputClass}
+      className="field"
       type={type}
       min={type === "number" ? 0 : undefined}
       step={field.type === "money" ? "0.01" : undefined}

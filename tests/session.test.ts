@@ -56,6 +56,19 @@ describe("draft → neighbor Yes/No → navigator Confirm", () => {
   });
 });
 
+describe("current question", () => {
+  it("is shared state that can be set, moved and cleared, and resets with the session", () => {
+    let s = sessionReducer(start(), { type: "SET_ACTIVE_FIELD", fieldId: "householdSize" });
+    expect(s.activeFieldId).toBe("householdSize");
+    s = sessionReducer(s, { type: "SET_ACTIVE_FIELD", fieldId: "grossMonthlyIncome" });
+    expect(s.activeFieldId).toBe("grossMonthlyIncome");
+    s = sessionReducer(s, { type: "SET_ACTIVE_FIELD", fieldId: null });
+    expect(s.activeFieldId).toBeNull();
+    s = sessionReducer(sessionReducer(s, { type: "SET_ACTIVE_FIELD", fieldId: "fullName" }), { type: "RESET" });
+    expect(s.activeFieldId).toBeNull();
+  });
+});
+
 describe("submit guardrail", () => {
   it("blocks submit until every value is answered Yes and confirmed", () => {
     let s = start();
