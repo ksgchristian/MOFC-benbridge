@@ -47,7 +47,7 @@ export class TranslateError extends Error {
   }
 }
 
-async function callClaude<S extends z.ZodType>(system: string, user: string, schema: S): Promise<z.infer<S>> {
+export async function callClaude<S extends z.ZodType>(system: string, user: string, schema: S): Promise<z.infer<S>> {
   try {
     const response = await getClient().beta.messages.parse({
       model: MODEL,

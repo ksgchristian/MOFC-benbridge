@@ -64,6 +64,8 @@ export const snapSampleForm: FormSchema = {
         {
           id: "grossMonthlyIncome",
           type: "money",
+          period: "monthly",
+          basis: "gross",
           required: true,
           label: { en: "Gross monthly income (before taxes)", es: "Ingresos brutos mensuales (antes de impuestos)" },
           help: {
@@ -74,6 +76,8 @@ export const snapSampleForm: FormSchema = {
         {
           id: "netMonthlyIncome",
           type: "money",
+          period: "monthly",
+          basis: "net",
           label: { en: "Net monthly income (after taxes)", es: "Ingresos netos mensuales (después de impuestos)" },
         },
         {
@@ -95,7 +99,7 @@ export const snapSampleForm: FormSchema = {
       id: "expenses",
       title: { en: "Housing costs", es: "Gastos de vivienda" },
       fields: [
-        { id: "monthlyRent", type: "money", label: { en: "Monthly rent or mortgage", es: "Renta o hipoteca mensual" } },
+        { id: "monthlyRent", type: "money", period: "monthly", label: { en: "Monthly rent or mortgage", es: "Renta o hipoteca mensual" } },
         { id: "paysUtilities", type: "yesno", label: { en: "Do you pay utilities (gas, electric, water)?", es: "¿Paga usted servicios públicos (gas, luz, agua)?" } },
       ],
     },
