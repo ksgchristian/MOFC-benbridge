@@ -3,6 +3,7 @@
 import { ui } from "@/lib/i18n/ui";
 import { NAVIGATOR_LANG } from "@/lib/languages";
 import { useSession } from "@/lib/session/SessionContext";
+import { FlagIcon, XIcon } from "./Icons";
 
 /**
  * Flags raised in this session. Staff export them and review each one; good
@@ -29,39 +30,39 @@ export function FlagsPanel() {
   };
 
   return (
-    <section className="space-y-2">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">
-          ⚑ {s.flags} ({state.flags.length})
+    <section>
+      <div className="flex items-center justify-between pr-1">
+        <h3 className="group-title !pb-0">
+          {s.flags} ({state.flags.length})
         </h3>
-        <button
-          type="button"
-          disabled={state.flags.length === 0}
-          onClick={exportFlags}
-          className="rounded-md border border-[var(--border)] px-2 py-1 text-xs hover:bg-[var(--muted)] disabled:opacity-40"
-        >
+        <button type="button" disabled={state.flags.length === 0} onClick={exportFlags} className="btn btn-sm btn-plain">
           {s.exportFlags}
         </button>
       </div>
-      {state.flags.length === 0 ? (
-        <p className="text-xs text-[var(--fg-muted)]">{s.noFlags}</p>
-      ) : (
-        <ul className="space-y-1 text-xs">
-          {state.flags.map((f) => (
-            <li key={f.id} className="flex items-start justify-between gap-2 rounded bg-[var(--muted)] p-2">
-              <div>
-                <p>
-                  <span className="font-medium">{f.by}</span> · {f.target.kind}: “{f.original}” → “{f.translation}”
+      <div className="card hairline mt-1.5 overflow-hidden">
+        {state.flags.length === 0 ? (
+          <p className="px-4 py-3 text-[13px] text-[var(--fg-muted)]">{s.noFlags}</p>
+        ) : (
+          state.flags.map((f) => (
+            <div key={f.id} className="flex items-start gap-3 px-4 py-3 text-[13px]">
+              <FlagIcon size={14} filled className="mt-0.5 shrink-0 text-[var(--warn)]" />
+              <div className="min-w-0 flex-1">
+                <p className="break-words">
+                  <span className="font-semibold capitalize">{f.by}</span>
+                  <span className="text-[var(--fg-muted)]"> · {f.target.kind}</span>
+                </p>
+                <p className="break-words">
+                  “{f.original}” → “{f.translation}”
                 </p>
                 {f.note && <p className="text-[var(--fg-muted)]">{f.note}</p>}
               </div>
-              <button type="button" className="text-[var(--fg-muted)] hover:underline" onClick={() => dispatch({ type: "REMOVE_FLAG", id: f.id })}>
-                ✕
+              <button type="button" aria-label="Remove flag" className="icon-btn" onClick={() => dispatch({ type: "REMOVE_FLAG", id: f.id })}>
+                <XIcon size={14} />
               </button>
-            </li>
-          ))}
-        </ul>
-      )}
+            </div>
+          ))
+        )}
+      </div>
     </section>
   );
 }

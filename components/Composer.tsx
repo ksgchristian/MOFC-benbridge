@@ -7,6 +7,7 @@ import { useSession } from "@/lib/session/SessionContext";
 import type { Speaker } from "@/lib/session/types";
 import { getSpeechProvider } from "@/lib/speech";
 import { Highlighted, HighlightLegend } from "./Highlighted";
+import { MicIcon, MicOffIcon, RedoIcon, SendIcon, StopIcon } from "./Icons";
 
 const noopSubscribe = () => () => {};
 
@@ -31,7 +32,8 @@ export function Composer({ speaker }: { speaker: Speaker }) {
   const stopRef = useRef<(() => void) | null>(null);
   const transcriptRef = useRef("");
 
-  // Client-only feature detection (server snapshot = false, so no hydration mismatch).
+  // Client-only checks. Server snapshots are false, so nothing flashes or mismatches on hydration.
+  const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
   const canListen = useSyncExternalStore(noopSubscribe, () => speech.canListen(), () => false);
   useEffect(() => () => stopRef.current?.(), []);
 
@@ -79,105 +81,111 @@ export function Composer({ speaker }: { speaker: Speaker }) {
     await sendMessage(speaker, text);
   };
 
-  const voiceUnavailableMessage = speech.id === "none" ? s.voiceOff : s.voiceUnsupported;
-
-  return (
-    <div className="space-y-2">
-      {/* Voice */}
-      {!canListen ? (
-        <p role="status" className="rounded-md bg-[var(--muted)] px-3 py-2 text-xs text-[var(--fg-muted)]">
-          🎤 {voiceUnavailableMessage}
-        </p>
-      ) : mode === "idle" ? (
-        <button
-          type="button"
-          onClick={startRecording}
-          className="w-full rounded-md border-2 border-dashed border-[var(--accent)] px-3 py-3 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent-soft)]"
-        >
-          🎤 {s.tapToSpeak}
-        </button>
-      ) : mode === "recording" ? (
-        <div className="space-y-2 rounded-md border-2 border-red-500 p-3" aria-live="polite">
-          <div className="flex items-center justify-between gap-2">
-            <span className="flex items-center gap-2 text-sm font-medium text-red-600">
-              <span className="inline-block h-2.5 w-2.5 animate-pulse rounded-full bg-red-600" aria-hidden />
-              {s.listening}
-            </span>
-            <button type="button" onClick={stopRecording} className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white">
-              ■ {s.stop}
-            </button>
-          </div>
-          <p lang={lang} className="min-h-6 text-sm text-[var(--fg-muted)]">
+  /* ---- Recording ---- */
+  if (mode === "recording") {
+    return (
+      <div className="flex items-center gap-3" aria-live="polite">
+        <span className="relative flex h-11 w-11 shrink-0 items-center justify-center">
+          <span className="absolute inset-0 animate-ping rounded-full bg-[var(--danger)] opacity-25" />
+          <span className="relative flex h-11 w-11 items-center justify-center rounded-full bg-[var(--danger)] text-white">
+            <MicIcon size={20} />
+          </span>
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] font-medium text-[var(--danger)]">{s.listening}</p>
+          <p lang={lang} className="truncate text-[15px] text-[var(--fg-muted)]">
             {transcript || "…"}
           </p>
         </div>
-      ) : (
-        <div className="space-y-2 rounded-md border-2 border-[var(--accent)] p-3">
-          <p className="text-xs font-medium">{s.checkTranscript}</p>
-          <textarea
-            value={transcript}
-            onChange={(e) => {
-              setTranscript(e.target.value);
-              transcriptRef.current = e.target.value;
-            }}
-            lang={lang}
-            rows={3}
-            aria-label={s.checkTranscript}
-            className="w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm"
-          />
-          {transcript.trim() && (
-            <div className="space-y-1 rounded-md bg-[var(--muted)] px-3 py-2">
-              <p lang={lang} className="text-sm leading-relaxed">
-                <Highlighted text={transcript} lang={lang} />
-              </p>
-              <HighlightLegend lang={lang} />
-            </div>
-          )}
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => void confirmTranscript()}
-              disabled={!transcript.trim()}
-              className="rounded-md bg-[var(--accent)] px-3 py-2 text-sm font-medium text-white disabled:opacity-40"
-            >
-              {s.translateBtn}
-            </button>
-            <button type="button" onClick={startRecording} className="rounded-md border border-[var(--border)] px-3 py-2 text-sm hover:bg-[var(--muted)]">
-              🎤 {s.reRecord}
-            </button>
-            <button type="button" onClick={cancelReview} className="rounded-md px-3 py-2 text-sm text-[var(--fg-muted)] hover:bg-[var(--muted)]">
-              {s.cancel}
-            </button>
-          </div>
-        </div>
-      )}
-      {notice && <p className="text-xs text-red-600">{notice}</p>}
+        <button type="button" onClick={stopRecording} aria-label={s.stop} className="btn btn-gray !h-11 !w-11 !p-0">
+          <StopIcon size={18} />
+        </button>
+      </div>
+    );
+  }
 
-      {/* Typed fallback */}
+  /* ---- Review the transcript ---- */
+  if (mode === "review") {
+    return (
+      <div className="space-y-3">
+        <p className="text-[13px] font-medium text-[var(--fg-muted)]">{s.checkTranscript}</p>
+        <textarea
+          value={transcript}
+          onChange={(e) => {
+            setTranscript(e.target.value);
+            transcriptRef.current = e.target.value;
+          }}
+          lang={lang}
+          rows={2}
+          aria-label={s.checkTranscript}
+          className="field resize-none"
+        />
+        {transcript.trim() && (
+          <div className="space-y-2 rounded-xl bg-[var(--fill)] px-3 py-2.5">
+            <p lang={lang} className="text-[15px] leading-relaxed">
+              <Highlighted text={transcript} lang={lang} />
+            </p>
+            <HighlightLegend lang={lang} />
+          </div>
+        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={() => void confirmTranscript()} disabled={!transcript.trim()} className="btn btn-primary">
+            {s.translateBtn}
+          </button>
+          <button type="button" onClick={startRecording} className="btn btn-gray">
+            <RedoIcon size={15} /> {s.reRecord}
+          </button>
+          <button type="button" onClick={cancelReview} className="btn btn-plain ml-auto">
+            {s.cancel}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ---- Idle: mic + typed box ---- */
+  const micUnavailable = mounted && !canListen;
+  return (
+    <div className="space-y-2">
       <form
-        className="flex gap-2"
+        className="flex items-center gap-2"
         onSubmit={(e) => {
           e.preventDefault();
           void submitTyped();
         }}
       >
-        <input
-          value={typed}
-          onChange={(e) => setTyped(e.target.value)}
-          placeholder={s.typeMessage}
-          aria-label={s.orType}
-          lang={lang}
-          disabled={mode === "recording"}
-          className="min-w-0 flex-1 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm"
-        />
         <button
-          type="submit"
-          disabled={!typed.trim()}
-          className="rounded-md bg-[var(--accent)] px-3 py-2 text-sm font-medium text-white disabled:opacity-40"
+          type="button"
+          onClick={startRecording}
+          disabled={!canListen}
+          title={micUnavailable ? (speech.id === "none" ? s.voiceOff : s.voiceUnsupported) : s.tapToSpeak}
+          aria-label={s.tapToSpeak}
+          className="btn btn-primary !h-11 !w-11 shrink-0 !p-0"
         >
-          {s.send}
+          {micUnavailable ? <MicOffIcon size={20} /> : <MicIcon size={20} />}
         </button>
+        <div className="relative min-w-0 flex-1">
+          <input
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+            placeholder={s.typeMessage}
+            aria-label={s.orType}
+            lang={lang}
+            className="field !h-11 !rounded-full !pl-4 !pr-12"
+          />
+          <button
+            type="submit"
+            disabled={!typed.trim()}
+            aria-label={s.send}
+            className="btn btn-primary absolute right-1.5 top-1/2 !h-8 !w-8 -translate-y-1/2 !p-0"
+          >
+            <SendIcon size={16} />
+          </button>
+        </div>
       </form>
+      {micUnavailable && <p className="px-1 text-[12px] text-[var(--fg-muted)]">{speech.id === "none" ? s.voiceOff : s.voiceUnsupported}</p>}
+      {!micUnavailable && mounted && <p className="px-1 text-[12px] text-[var(--fg-muted)]">{s.tapToSpeak}</p>}
+      {notice && <p className="px-1 text-[13px] text-[var(--danger)]">{notice}</p>}
     </div>
   );
 }

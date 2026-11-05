@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { UiStrings } from "@/lib/i18n/ui";
+import { FlagIcon } from "./Icons";
 
 /** One-tap "this translation looks wrong". Asks for an optional note. */
 export function FlagButton({ strings, onFlag }: { strings: UiStrings; onFlag: (note: string) => void }) {
@@ -9,17 +10,17 @@ export function FlagButton({ strings, onFlag }: { strings: UiStrings; onFlag: (n
   return (
     <button
       type="button"
-      title={strings.flag}
-      aria-label={strings.flag}
+      title={flagged ? strings.flagged : strings.flag}
+      aria-label={flagged ? strings.flagged : strings.flag}
       disabled={flagged}
       onClick={() => {
         const note = window.prompt(strings.flagNotePrompt) ?? "";
         onFlag(note);
         setFlagged(true);
       }}
-      className="rounded px-1.5 py-0.5 text-xs text-amber-700 hover:bg-amber-100 disabled:text-amber-500 disabled:hover:bg-transparent dark:text-amber-400 dark:hover:bg-amber-950"
+      className={`icon-btn ${flagged ? "!text-[var(--warn)]" : ""}`}
     >
-      {flagged ? `⚑ ${strings.flagged}` : "⚑"}
+      <FlagIcon size={15} filled={flagged} />
     </button>
   );
 }

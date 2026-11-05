@@ -1,10 +1,10 @@
 import { segment, type RiskKind } from "@/lib/highlight";
 import type { LangCode } from "@/lib/languages";
 
-const KIND_CLASS: Record<RiskKind, string> = {
-  number: "bg-yellow-200 text-yellow-950 dark:bg-yellow-700/60 dark:text-yellow-50",
-  frequency: "bg-sky-200 text-sky-950 dark:bg-sky-700/60 dark:text-sky-50",
-  basis: "bg-fuchsia-200 text-fuchsia-950 dark:bg-fuchsia-700/60 dark:text-fuchsia-50",
+const KIND_BG: Record<RiskKind, string> = {
+  number: "bg-[var(--mark-number)]",
+  frequency: "bg-[var(--mark-frequency)]",
+  basis: "bg-[var(--mark-basis)]",
 };
 
 const KIND_TITLE: Record<RiskKind, string> = {
@@ -19,7 +19,7 @@ export function Highlighted({ text, lang }: { text: string; lang: LangCode }) {
     <>
       {segment(text, lang).map((s, i) =>
         s.kind ? (
-          <mark key={i} title={KIND_TITLE[s.kind]} className={`rounded px-0.5 ${KIND_CLASS[s.kind]}`}>
+          <mark key={i} title={KIND_TITLE[s.kind]} className={`mark ${KIND_BG[s.kind]}`}>
             {s.text}
           </mark>
         ) : (
@@ -37,9 +37,9 @@ export function HighlightLegend({ lang }: { lang: LangCode }) {
       ? { number: "número", frequency: "frecuencia", basis: "antes/después de impuestos" }
       : { number: "number", frequency: "how often", basis: "gross / net" };
   return (
-    <span className="flex flex-wrap gap-2 text-[11px] text-[var(--fg-muted)]">
+    <span className="flex flex-wrap gap-1.5 text-[11px]">
       {(Object.keys(labels) as RiskKind[]).map((k) => (
-        <span key={k} className={`rounded px-1 ${KIND_CLASS[k]}`}>
+        <span key={k} className={`mark ${KIND_BG[k]}`}>
           {labels[k]}
         </span>
       ))}

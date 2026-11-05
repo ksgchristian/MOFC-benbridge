@@ -10,13 +10,18 @@ export default function Home() {
   return (
     <SessionProvider form={snapSampleForm}>
       <div className="flex h-screen flex-col">
-        <header className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--surface)] px-4 py-2">
-          <h1 className="text-sm font-semibold">BenBridge · Mid-Ohio Food Collective prototype</h1>
-          <span className="rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-200">
-            Sample data only
-          </span>
+        <header className="glass sticky top-0 z-10 border-b border-[var(--separator)]">
+          <div className="mx-auto flex h-14 max-w-[1400px] items-center justify-between px-5">
+            <div className="flex items-baseline gap-2">
+              <span className="text-[17px] font-semibold tracking-tight">
+                Ben<span className="text-[var(--accent)]">Bridge</span>
+              </span>
+              <span className="hidden text-[13px] text-[var(--fg-muted)] sm:inline">Benefits interpreter · Mid-Ohio Food Collective</span>
+            </div>
+            <span className="chip bg-[var(--fill)] text-[var(--fg-muted)]">Sample data only</span>
+          </div>
         </header>
-        <main className="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto lg:overflow-hidden divide-y divide-[var(--border)] lg:grid-cols-2 lg:divide-x lg:divide-y-0">
+        <main className="mx-auto grid min-h-0 w-full max-w-[1400px] flex-1 grid-cols-1 overflow-y-auto lg:grid-cols-2 lg:overflow-hidden">
           <NeighborPane />
           <NavigatorPane />
         </main>
