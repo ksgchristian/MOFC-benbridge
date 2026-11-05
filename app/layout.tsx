@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "BenBridge",
+  title: "BenefitBridge",
   description: "Shared-screen translation for benefits applications (MOFC prototype, sample data only).",
 };
 

@@ -1,6 +1,6 @@
 @AGENTS.md
 
-# MOFC-benbridge: rules for Claude Code sessions
+# BenefitBridge (repo: MOFC-benbridge): rules for Claude Code sessions
 
 Prototype for Mid-Ohio Food Collective: shared-screen English/Spanish translation for benefits applications. Read README.md for the architecture. Product context (PRD, discovery notes) lives in the shared Google Drive folder "Mid-Ohio Food Collective"; ask the user before assuming product decisions.
 

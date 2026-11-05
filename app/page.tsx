@@ -14,7 +14,7 @@ export default function Home() {
           <div className="mx-auto flex h-14 max-w-[1400px] items-center justify-between px-5">
             <div className="flex items-baseline gap-2">
               <span className="text-[17px] font-semibold tracking-tight">
-                Ben<span className="text-[var(--accent)]">Bridge</span>
+                Benefit<span className="text-[var(--accent)]">Bridge</span>
               </span>
               <span className="hidden text-[13px] text-[var(--fg-muted)] sm:inline">Benefits interpreter · Mid-Ohio Food Collective</span>
             </div>
