@@ -1,17 +1,23 @@
 "use client";
 
-import { ui } from "@/lib/i18n/ui";
+import { useState } from "react";
+import { ui, type UiStrings } from "@/lib/i18n/ui";
 import { displayValue } from "@/lib/forms/display";
 import { YES_NO_LABELS, type FormField } from "@/lib/forms/schema";
 import { useFormLabels } from "@/lib/forms/useFormLabels";
+import type { LangCode } from "@/lib/languages";
+import { canConfirm } from "@/lib/session/reducer";
 import { useSession } from "@/lib/session/SessionContext";
-import type { Speaker } from "@/lib/session/types";
+import type { FieldState, Speaker } from "@/lib/session/types";
 import { FlagButton } from "./FlagButton";
+import { Highlighted } from "./Highlighted";
 
 /**
  * The same application rendered for either side.
- * - navigator: English labels, editable inputs, sees confirmation status.
- * - neighbor: labels in their language, read-only values, Confirm per field.
+ * - navigator: English labels; types values (which become pending) and is the
+ *   only one who can Confirm a pending value into the form.
+ * - neighbor: labels in their language; read-only values; answers Sí/No on
+ *   each pending value. That is the neighbor's only form action.
  */
 export function FormView({ viewer }: { viewer: Speaker }) {
   const { form, state, langFor } = useSession();
@@ -40,123 +46,229 @@ export function FormView({ viewer }: { viewer: Speaker }) {
   );
 }
 
-function FieldRow({
-  field,
-  viewer,
-  labels,
-}: {
-  field: FormField;
-  viewer: Speaker;
-  labels: ReturnType<typeof useFormLabels>;
-}) {
-  const { state, dispatch, langFor, addFlag } = useSession();
+type Labels = ReturnType<typeof useFormLabels>;
+
+function FieldRow({ field, viewer, labels }: { field: FormField; viewer: Speaker; labels: Labels }) {
+  const { state, langFor, addFlag } = useSession();
   const lang = langFor(viewer);
   const s = ui(lang);
-  const fs = state.fields[field.id];
-  const value = fs?.value ?? "";
+  const fs: FieldState = state.fields[field.id] ?? { value: "", confirmed: false };
   const labelKey = `field.${field.id}.label`;
   const label = labels.t(labelKey, field.label);
   const help = labels.t(`field.${field.id}.help`, field.help);
-  const machine = labels.isMachine(labelKey);
   const inputId = `${viewer}-${field.id}`;
 
-  const status = value.trim() === "" ? null : fs?.confirmed ? "confirmed" : "pending";
-
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
       <div className="flex items-start justify-between gap-2">
         <label htmlFor={inputId} className="text-sm">
           {label}
           {field.required && <span className="text-red-600"> *</span>}
-          {machine && <span className="ml-1 rounded bg-[var(--muted)] px-1 text-[10px] uppercase text-[var(--fg-muted)]">AI</span>}
+          {labels.isMachine(labelKey) && (
+            <span className="ml-1 rounded bg-[var(--muted)] px-1 text-[10px] uppercase text-[var(--fg-muted)]">AI</span>
+          )}
         </label>
         {viewer === "neighbor" && lang !== "en" && (
-          <FlagButton
-            strings={s}
-            onFlag={(note) => addFlag(viewer, { kind: "field", fieldId: field.id }, field.label.en, label, note)}
-          />
+          <FlagButton strings={s} onFlag={(note) => addFlag(viewer, { kind: "field", fieldId: field.id }, field.label.en, label, note)} />
         )}
       </div>
       {help && <p className="text-xs text-[var(--fg-muted)]">{help}</p>}
 
       {viewer === "navigator" ? (
-        <div className="flex items-center gap-2">
-          <FieldInput id={inputId} field={field} value={value} onChange={(v) => dispatch({ type: "SET_FIELD", fieldId: field.id, value: v })} />
-          <StatusBadge status={status} strings={s} />
-        </div>
+        <NavigatorField field={field} fs={fs} inputId={inputId} s={s} labels={labels} />
       ) : (
-        <div className="flex items-center gap-2">
-          <output id={inputId} className="min-h-9 flex-1 rounded-md bg-[var(--muted)] px-3 py-2 text-sm">
-            {displayValue(field, value, lang, labels.t) || s.empty}
-          </output>
-          {status && (
+        <NeighborField field={field} fs={fs} inputId={inputId} s={s} lang={lang} labels={labels} />
+      )}
+    </div>
+  );
+}
+
+function ConfirmedValue({ field, fs, lang, labels, s }: { field: FormField; fs: FieldState; lang: LangCode; labels: Labels; s: UiStrings }) {
+  if (!fs.confirmed || !fs.value) return null;
+  return (
+    <p className="text-sm text-green-700 dark:text-green-400">
+      ✓ {s.confirmed}: <span className="font-medium">{displayValue(field, fs.value, lang, labels.t)}</span>
+    </p>
+  );
+}
+
+/* ---------------- Navigator ---------------- */
+
+function NavigatorField({ field, fs, inputId, s, labels }: { field: FormField; fs: FieldState; inputId: string; s: UiStrings; labels: Labels }) {
+  const { dispatch } = useSession();
+  const propose = (value: string) => {
+    if (value.trim() === "") return;
+    dispatch({ type: "PROPOSE_VALUE", fieldId: field.id, pending: { value, origin: "navigator", unclear: false, ask: "" } });
+  };
+  const p = fs.pending;
+  const shown = p ? displayValue(field, p.value, "en", labels.t) : "";
+
+  return (
+    <div className="space-y-2">
+      {/* Re-mount the input when the pending/committed value changes so it shows the latest. */}
+      <FieldInput key={`${p?.value ?? fs.value}`} id={inputId} field={field} initial={p?.value ?? fs.value} onCommit={propose} />
+      <ConfirmedValue field={field} fs={fs} lang="en" labels={labels} s={s} />
+
+      {p && (
+        <div className={`space-y-1.5 rounded-md border p-2 text-sm ${p.unclear ? "border-amber-400 bg-amber-50 dark:bg-amber-950/40" : "border-[var(--border)] bg-[var(--muted)]"}`}>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded bg-[var(--surface)] px-1.5 py-0.5 text-[11px] text-[var(--fg-muted)]">
+              {p.origin === "claude" ? `✎ ${s.draftedFromConversation}` : s.enteredByNavigator}
+            </span>
+            <span className="font-medium">{shown ? <Highlighted text={shown} lang="en" /> : "—"}</span>
+          </div>
+          {p.unclear ? (
+            <p className="text-amber-800 dark:text-amber-300">
+              ⚠ {s.unclearAsk} {p.ask}
+            </p>
+          ) : (
+            <p className={`text-xs ${fs.neighborAnswer === "no" ? "text-red-600" : fs.neighborAnswer === "yes" ? "text-green-700 dark:text-green-400" : "text-[var(--fg-muted)]"}`}>
+              {fs.neighborAnswer === "yes" ? `✓ ${s.neighborSaidYes}` : fs.neighborAnswer === "no" ? `✕ ${s.neighborSaidNo}` : s.waitingForNeighbor}
+            </p>
+          )}
+          <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => dispatch({ type: "CONFIRM_FIELD", fieldId: field.id, confirmed: !fs?.confirmed })}
-              className={`shrink-0 rounded-md px-3 py-2 text-sm font-medium ${
-                fs?.confirmed ? "bg-green-600 text-white" : "border border-green-600 text-green-700 dark:text-green-400"
-              }`}
+              disabled={!canConfirm(fs)}
+              onClick={() => dispatch({ type: "NAVIGATOR_CONFIRM", fieldId: field.id })}
+              className="rounded-md bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
             >
-              {fs?.confirmed ? `✓ ${s.confirmed}` : s.confirm}
+              {s.confirm}
             </button>
-          )}
+            <button
+              type="button"
+              onClick={() => dispatch({ type: "DISCARD_PENDING", fieldId: field.id })}
+              className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm hover:bg-[var(--surface)]"
+            >
+              {s.discard}
+            </button>
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-function StatusBadge({ status, strings }: { status: "confirmed" | "pending" | null; strings: ReturnType<typeof ui> }) {
-  if (!status) return null;
-  return status === "confirmed" ? (
-    <span className="shrink-0 text-xs text-green-700 dark:text-green-400">✓ {strings.confirmed}</span>
-  ) : (
-    <span className="shrink-0 text-xs text-[var(--fg-muted)]">{strings.notConfirmed}</span>
+/* ---------------- Neighbor ---------------- */
+
+function NeighborField({
+  field,
+  fs,
+  inputId,
+  s,
+  lang,
+  labels,
+}: {
+  field: FormField;
+  fs: FieldState;
+  inputId: string;
+  s: UiStrings;
+  lang: LangCode;
+  labels: Labels;
+}) {
+  const { dispatch } = useSession();
+  const p = fs.pending;
+
+  if (!p) {
+    const shown = fs.confirmed ? displayValue(field, fs.value, lang, labels.t) : "";
+    return (
+      <output id={inputId} className={`block min-h-9 rounded-md bg-[var(--muted)] px-3 py-2 text-sm ${shown ? "" : "text-[var(--fg-muted)]"}`}>
+        {shown ? `✓ ${shown}` : s.empty}
+      </output>
+    );
+  }
+
+  const shown = displayValue(field, p.value, lang, labels.t);
+  return (
+    <div id={inputId} className="space-y-2 rounded-md border border-[var(--accent)] p-2">
+      <p className="text-base font-medium">{shown ? <Highlighted text={shown} lang={lang} /> : "—"}</p>
+      {p.unclear ? (
+        <p className="text-sm text-[var(--fg-muted)]">{s.navigatorWillAsk}</p>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm">{s.isThisRight}</span>
+          {(["yes", "no"] as const).map((a) => (
+            <button
+              key={a}
+              type="button"
+              aria-pressed={fs.neighborAnswer === a}
+              onClick={() => dispatch({ type: "NEIGHBOR_ANSWER", fieldId: field.id, answer: a })}
+              className={`min-w-16 rounded-md px-4 py-2 text-sm font-semibold ${
+                fs.neighborAnswer === a
+                  ? a === "yes"
+                    ? "bg-green-600 text-white"
+                    : "bg-red-600 text-white"
+                  : a === "yes"
+                    ? "border-2 border-green-600 text-green-700 dark:text-green-400"
+                    : "border-2 border-red-600 text-red-700 dark:text-red-400"
+              }`}
+            >
+              {a === "yes" ? s.yes : s.no}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
-const inputClass = "min-w-0 flex-1 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm";
+/* ---------------- Inputs ---------------- */
 
-function FieldInput({ id, field, value, onChange }: { id: string; field: FormField; value: string; onChange: (v: string) => void }) {
-  switch (field.type) {
-    case "select":
-      return (
-        <select id={id} className={inputClass} value={value} onChange={(e) => onChange(e.target.value)}>
-          <option value="">Select…</option>
-          {field.options.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label.en}
-            </option>
-          ))}
-        </select>
-      );
-    case "yesno":
-      return (
-        <select id={id} className={inputClass} value={value} onChange={(e) => onChange(e.target.value)}>
-          <option value="">Select…</option>
-          <option value="yes">{YES_NO_LABELS.yes.en}</option>
-          <option value="no">{YES_NO_LABELS.no.en}</option>
-        </select>
-      );
-    case "money":
-    case "number":
-      return (
-        <input
-          id={id}
-          className={inputClass}
-          type="number"
-          min={0}
-          step={field.type === "money" ? "0.01" : "1"}
-          inputMode="decimal"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-        />
-      );
-    case "date":
-      return <input id={id} className={inputClass} type="date" value={value} onChange={(e) => onChange(e.target.value)} />;
-    case "phone":
-      return <input id={id} className={inputClass} type="tel" value={value} onChange={(e) => onChange(e.target.value)} />;
-    default:
-      return <input id={id} className={inputClass} type="text" value={value} onChange={(e) => onChange(e.target.value)} />;
+const inputClass = "w-full min-w-0 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm";
+
+/**
+ * Navigator input. Text-like inputs propose on blur or Enter (not every
+ * keystroke); selects propose on change.
+ */
+function FieldInput({ id, field, initial, onCommit }: { id: string; field: FormField; initial: string; onCommit: (v: string) => void }) {
+  const [v, setV] = useState(initial);
+  const commit = () => {
+    if (v !== initial) onCommit(v);
+  };
+
+  if (field.type === "select" || field.type === "yesno") {
+    const options =
+      field.type === "select"
+        ? field.options.map((o) => ({ value: o.value, label: o.label.en }))
+        : (["yes", "no"] as const).map((k) => ({ value: k, label: YES_NO_LABELS[k].en }));
+    return (
+      <select
+        id={id}
+        className={inputClass}
+        value={v}
+        onChange={(e) => {
+          setV(e.target.value);
+          if (e.target.value) onCommit(e.target.value);
+        }}
+      >
+        <option value="">Select…</option>
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    );
   }
+
+  const type = field.type === "money" || field.type === "number" ? "number" : field.type === "phone" ? "tel" : field.type;
+  return (
+    <input
+      id={id}
+      className={inputClass}
+      type={type}
+      min={type === "number" ? 0 : undefined}
+      step={field.type === "money" ? "0.01" : undefined}
+      inputMode={type === "number" ? "decimal" : undefined}
+      value={v}
+      onChange={(e) => setV(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commit();
+        }
+      }}
+    />
+  );
 }

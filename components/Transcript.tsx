@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { allFields } from "@/lib/forms/schema";
 import { LANGUAGES } from "@/lib/languages";
 import { ui } from "@/lib/i18n/ui";
 import { useSession } from "@/lib/session/SessionContext";
@@ -35,7 +36,7 @@ export function Transcript({ viewer }: { viewer: Speaker }) {
 }
 
 function MessageRow({ message: m, viewer }: { message: Message; viewer: Speaker }) {
-  const { langFor, retryMessage, addFlag } = useSession();
+  const { form, langFor, retryMessage, addFlag } = useSession();
   const viewerLang = langFor(viewer);
   const s = ui(viewerLang);
   const mine = m.speaker === viewer;
@@ -80,6 +81,12 @@ function MessageRow({ message: m, viewer }: { message: Message; viewer: Speaker 
             ⚠ {s.uncertain}
             {/* The note is written in English for the navigator. */}
             {viewer === "navigator" && m.uncertaintyNote ? `: ${m.uncertaintyNote}` : ""}
+          </p>
+        )}
+
+        {viewer === "navigator" && m.draftedFields && m.draftedFields.length > 0 && (
+          <p className="mt-1 text-xs text-[var(--accent)]">
+            ✎ Drafted: {m.draftedFields.map((id) => allFields(form).find((f) => f.id === id)?.label.en ?? id).join(", ")}
           </p>
         )}
 

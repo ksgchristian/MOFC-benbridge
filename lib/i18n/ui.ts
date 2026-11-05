@@ -29,7 +29,7 @@ const en = {
   submitted: "Submitted (mock). Nothing was sent anywhere.",
   submitBlocked: "Before submitting:",
   missingRequired: "Required fields empty",
-  waitingConfirm: "Fields the neighbor hasn't confirmed",
+  waitingConfirm: "Waiting for neighbor Yes + your Confirm",
   loadSample: "Load sample neighbor",
   flags: "Flags",
   exportFlags: "Export flags (JSON)",

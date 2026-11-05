@@ -71,9 +71,9 @@ export function NavigatorPane() {
                     {s.missingRequired}: {readiness.missingRequired.map(labelOf).join(", ")}
                   </p>
                 )}
-                {readiness.unconfirmed.length > 0 && (
+                {readiness.pending.length > 0 && (
                   <p>
-                    {s.waitingConfirm}: {readiness.unconfirmed.map(labelOf).join(", ")}
+                    {s.waitingConfirm}: {readiness.pending.map(labelOf).join(", ")}
                   </p>
                 )}
               </div>

@@ -9,7 +9,7 @@ export class ClientTranslateError extends Error {
   }
 }
 
-async function postJson<T>(url: string, body: unknown): Promise<T> {
+export async function postJson<T>(url: string, body: unknown): Promise<T> {
   let res: Response;
   try {
     res = await fetch(url, {
