@@ -16,6 +16,7 @@ export function NeighborPane() {
 
   return (
     <PaneLayout
+      side="neighbor"
       lang={lang}
       top={
         <>

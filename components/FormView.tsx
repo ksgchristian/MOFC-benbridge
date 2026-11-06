@@ -6,6 +6,7 @@ import { displayValue } from "@/lib/forms/display";
 import { YES_NO_LABELS, type FormField } from "@/lib/forms/schema";
 import { useFormLabels } from "@/lib/forms/useFormLabels";
 import type { LangCode } from "@/lib/languages";
+import { usePauseScrollSync } from "@/lib/scrollSync";
 import { canConfirm } from "@/lib/session/reducer";
 import { useSession } from "@/lib/session/SessionContext";
 import type { FieldState, Speaker } from "@/lib/session/types";
@@ -82,14 +83,19 @@ function FieldRow({ field, viewer, labels }: { field: FormField; viewer: Speaker
     }
   };
 
-  // When this becomes the current question, bring it into view on both sides.
+  // When this becomes the current question, bring it into view on both sides
+  // (each side scrolls itself, so linked scrolling pauses for a moment).
+  const pauseSync = usePauseScrollSync();
   useEffect(() => {
-    if (active) rowRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  }, [active]);
+    if (!active) return;
+    pauseSync("form");
+    rowRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [active, pauseSync]);
 
   return (
     <div
       ref={rowRef}
+      data-sync-key={field.id}
       onPointerUp={onPointerUp}
       aria-current={active ? "step" : undefined}
       className={`relative select-none space-y-2 px-4 py-3.5 transition-colors ${active ? "bg-[var(--accent-soft)]" : ""}`}
@@ -136,6 +142,8 @@ function ConfirmedValue({ field, fs, lang, labels, s }: { field: FormField; fs: 
 
 function NavigatorField({ field, fs, inputId, s, labels }: { field: FormField; fs: FieldState; inputId: string; s: UiStrings; labels: Labels }) {
   const { dispatch } = useSession();
+  // Clicking or tabbing into a field makes it the current question, so it lights up on the other side too.
+  const markCurrent = () => dispatch({ type: "SET_ACTIVE_FIELD", fieldId: field.id });
   const propose = (value: string) => {
     if (value.trim() === "") return;
     dispatch({ type: "PROPOSE_VALUE", fieldId: field.id, pending: { value, origin: "navigator", unclear: false, ask: "" } });
@@ -146,7 +154,7 @@ function NavigatorField({ field, fs, inputId, s, labels }: { field: FormField; f
   return (
     <div className="space-y-2">
       {/* Re-mount the input when the pending/committed value changes so it shows the latest. */}
-      <FieldInput key={`${p?.value ?? fs.value}`} id={inputId} field={field} initial={p?.value ?? fs.value} onCommit={propose} />
+      <FieldInput key={`${p?.value ?? fs.value}`} id={inputId} field={field} initial={p?.value ?? fs.value} onCommit={propose} onFocus={markCurrent} />
       <ConfirmedValue field={field} fs={fs} lang="en" labels={labels} s={s} />
 
       {p && (
@@ -257,7 +265,19 @@ function NeighborField({
  * Navigator input. Text-like inputs propose on blur or Enter (not every
  * keystroke); selects propose on change.
  */
-function FieldInput({ id, field, initial, onCommit }: { id: string; field: FormField; initial: string; onCommit: (v: string) => void }) {
+function FieldInput({
+  id,
+  field,
+  initial,
+  onCommit,
+  onFocus,
+}: {
+  id: string;
+  field: FormField;
+  initial: string;
+  onCommit: (v: string) => void;
+  onFocus: () => void;
+}) {
   const [v, setV] = useState(initial);
   const commit = () => {
     if (v !== initial) onCommit(v);
@@ -272,6 +292,7 @@ function FieldInput({ id, field, initial, onCommit }: { id: string; field: FormF
       <select
         id={id}
         className="field"
+        onFocus={onFocus}
         value={v}
         onChange={(e) => {
           setV(e.target.value);
@@ -298,6 +319,7 @@ function FieldInput({ id, field, initial, onCommit }: { id: string; field: FormF
       step={field.type === "money" ? "0.01" : undefined}
       inputMode={type === "number" ? "decimal" : undefined}
       value={v}
+      onFocus={onFocus}
       onChange={(e) => setV(e.target.value)}
       onBlur={commit}
       onKeyDown={(e) => {

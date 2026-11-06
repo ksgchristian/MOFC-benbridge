@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { allFields } from "@/lib/forms/schema";
 import { LANGUAGES } from "@/lib/languages";
 import { ui } from "@/lib/i18n/ui";
 import { useSession } from "@/lib/session/SessionContext";
 import type { Message, Speaker } from "@/lib/session/types";
+import { usePauseScrollSync, useSyncedScroll } from "@/lib/scrollSync";
 import { getSpeechProvider } from "@/lib/speech";
 import { FlagButton } from "./FlagButton";
 import { Highlighted } from "./Highlighted";
@@ -19,15 +20,27 @@ import { AlertIcon, SparkleIcon, SpeakerIcon } from "./Icons";
 export function Transcript({ viewer }: { viewer: Speaker }) {
   const { state, langFor } = useSession();
   const s = ui(langFor(viewer));
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const syncRef = useSyncedScroll("chat", viewer);
+  const pauseSync = usePauseScrollSync();
+  // One ref for both: our own auto-scroll and linked scrolling with the other side.
+  const setRefs = useCallback(
+    (el: HTMLDivElement | null) => {
+      scrollRef.current = el;
+      return syncRef(el);
+    },
+    [syncRef],
+  );
 
   useEffect(() => {
     const el = scrollRef.current;
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-  }, [state.messages]);
+    if (!el) return;
+    pauseSync("chat"); // both sides jump to the newest message on their own
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }, [state.messages, pauseSync]);
 
   return (
-    <div ref={scrollRef} className="h-[clamp(140px,26vh,280px)] space-y-3 overflow-y-auto px-4 py-4">
+    <div ref={setRefs} className="h-[clamp(140px,26vh,280px)] space-y-3 overflow-y-auto px-4 py-4">
       {state.messages.length === 0 ? (
         <div className="flex h-full items-center justify-center text-center text-[15px] text-[var(--fg-muted)]">{s.noMessages}</div>
       ) : (
@@ -51,7 +64,7 @@ function MessageRow({ message: m, viewer }: { message: Message; viewer: Speaker 
   const secondaryLabel = mine ? s.theySee : s.original;
 
   return (
-    <div className={`flex flex-col gap-1 ${mine ? "items-end" : "items-start"}`}>
+    <div data-sync-key={m.id} className={`flex flex-col gap-1 ${mine ? "items-end" : "items-start"}`}>
       <div
         className={`max-w-[85%] rounded-[20px] px-4 py-2.5 text-[15px] leading-snug ${
           mine ? "rounded-br-md bg-[var(--accent)] text-[var(--on-accent)]" : "rounded-bl-md bg-[var(--bubble-them)] text-[var(--fg)]"

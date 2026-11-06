@@ -21,6 +21,7 @@ export function NavigatorPane() {
 
   return (
     <PaneLayout
+      side="navigator"
       lang="en"
       className="lg:border-r lg:border-[var(--separator)]"
       top={
