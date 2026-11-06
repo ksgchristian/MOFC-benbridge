@@ -11,6 +11,7 @@ import { FlagsPanel } from "./FlagsPanel";
 import { FormView } from "./FormView";
 import { CheckIcon } from "./Icons";
 import { PaneHeader } from "./PaneHeader";
+import { PaneLayout } from "./PaneLayout";
 
 export function NavigatorPane() {
   const { state, form, dispatch, langFor } = useSession();
@@ -19,35 +20,41 @@ export function NavigatorPane() {
   const labelOf = (id: string) => allFields(form).find((f) => f.id === id)?.label.en ?? id;
 
   return (
-    <section lang="en" className="flex min-h-0 flex-col gap-6 overflow-y-auto px-5 py-6">
-      <PaneHeader title={s.navigatorPane} language="English">
-        <select
-          aria-label={s.loadSample}
-          className="field !h-[30px] !w-auto !rounded-full !px-3 text-[13px]"
-          value=""
-          onChange={(e) => {
-            const n = sampleNeighbors.find((x) => x.id === e.target.value);
-            if (n) dispatch({ type: "LOAD_VALUES", values: n.values });
-          }}
-        >
-          <option value="">{s.loadSample}…</option>
-          {sampleNeighbors.map((n) => (
-            <option key={n.id} value={n.id}>
-              {n.description}
-            </option>
-          ))}
-        </select>
-        <button
-          type="button"
-          onClick={() => confirm("Clear the conversation, form, and flags?") && dispatch({ type: "RESET" })}
-          className="btn btn-sm btn-gray"
-        >
-          {s.reset}
-        </button>
-      </PaneHeader>
+    <PaneLayout
+      lang="en"
+      className="lg:border-r lg:border-[var(--separator)]"
+      top={
+        <>
+          <PaneHeader title={s.navigatorPane} language="English">
+            <select
+              aria-label={s.loadSample}
+              className="field !h-[30px] !w-auto !rounded-full !px-3 text-[13px]"
+              value=""
+              onChange={(e) => {
+                const n = sampleNeighbors.find((x) => x.id === e.target.value);
+                if (n) dispatch({ type: "LOAD_VALUES", values: n.values });
+              }}
+            >
+              <option value="">{s.loadSample}…</option>
+              {sampleNeighbors.map((n) => (
+                <option key={n.id} value={n.id}>
+                  {n.description}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => confirm("Clear the conversation, form, and flags?") && dispatch({ type: "RESET" })}
+              className="btn btn-sm btn-gray"
+            >
+              {s.reset}
+            </button>
+          </PaneHeader>
 
-      <Conversation viewer="navigator" footnote={getSpeechProvider().privacyNote} />
-
+          <Conversation viewer="navigator" footnote={getSpeechProvider().privacyNote} />
+        </>
+      }
+    >
       <FormView viewer="navigator" />
 
       <div className="card space-y-3 p-4">
@@ -80,6 +87,6 @@ export function NavigatorPane() {
       </div>
 
       <FlagsPanel />
-    </section>
+    </PaneLayout>
   );
 }

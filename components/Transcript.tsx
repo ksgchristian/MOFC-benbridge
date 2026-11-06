@@ -27,7 +27,7 @@ export function Transcript({ viewer }: { viewer: Speaker }) {
   }, [state.messages]);
 
   return (
-    <div ref={scrollRef} className="h-80 space-y-3 overflow-y-auto px-4 py-4">
+    <div ref={scrollRef} className="h-[clamp(140px,26vh,280px)] space-y-3 overflow-y-auto px-4 py-4">
       {state.messages.length === 0 ? (
         <div className="flex h-full items-center justify-center text-center text-[15px] text-[var(--fg-muted)]">{s.noMessages}</div>
       ) : (

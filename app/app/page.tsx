@@ -5,7 +5,7 @@ import { NeighborPane } from "@/components/NeighborPane";
 import { snapSampleForm } from "@/lib/forms/snap-sample";
 import { SessionProvider } from "@/lib/session/SessionContext";
 
-/** One screen, two panes: neighbor (their language) | navigator (English). */
+/** One screen, two panes: navigator (English) | neighbor (their language). */
 export default function Home() {
   return (
     <SessionProvider form={snapSampleForm}>
@@ -21,9 +21,10 @@ export default function Home() {
             <span className="chip bg-[var(--fill)] text-[var(--fg-muted)]">Sample data only</span>
           </div>
         </header>
-        <main className="mx-auto grid min-h-0 w-full max-w-[1400px] flex-1 grid-cols-1 overflow-y-auto lg:grid-cols-2 lg:overflow-hidden">
-          <NeighborPane />
+        <main className="mx-auto grid min-h-0 w-full max-w-[1400px] flex-1 grid-cols-1 overflow-y-auto lg:grid-cols-2 lg:grid-rows-[minmax(0,1fr)] lg:overflow-hidden">
+          {/* English (navigator) on the left, Spanish (neighbor) on the right. */}
           <NavigatorPane />
+          <NeighborPane />
         </main>
       </div>
     </SessionProvider>
