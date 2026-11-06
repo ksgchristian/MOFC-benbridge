@@ -18,12 +18,8 @@ export function NeighborPane() {
     <PaneLayout
       side="neighbor"
       lang={lang}
-      top={
-        <>
-          <PaneHeader title={s.neighborPane} language={LANGUAGES[lang].nativeName} />
-          <Conversation viewer="neighbor" />
-        </>
-      }
+      header={<PaneHeader title={s.neighborPane} language={LANGUAGES[lang].nativeName} />}
+      bottom={<Conversation viewer="neighbor" />}
     >
       {state.submitted && (
         <div className="card flex items-center gap-2 p-4 text-[15px] font-medium text-[var(--accent)]">

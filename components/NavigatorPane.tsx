@@ -24,37 +24,34 @@ export function NavigatorPane() {
       side="navigator"
       lang="en"
       className="lg:border-r lg:border-[var(--separator)]"
-      top={
-        <>
-          <PaneHeader title={s.navigatorPane} language="English">
-            <select
-              aria-label={s.loadSample}
-              className="field !h-[30px] !w-auto !rounded-full !px-3 text-[13px]"
-              value=""
-              onChange={(e) => {
-                const n = sampleNeighbors.find((x) => x.id === e.target.value);
-                if (n) dispatch({ type: "LOAD_VALUES", values: n.values });
-              }}
-            >
-              <option value="">{s.loadSample}…</option>
-              {sampleNeighbors.map((n) => (
-                <option key={n.id} value={n.id}>
-                  {n.description}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={() => confirm("Clear the conversation, form, and flags?") && dispatch({ type: "RESET" })}
-              className="btn btn-sm btn-gray"
-            >
-              {s.reset}
-            </button>
-          </PaneHeader>
-
-          <Conversation viewer="navigator" footnote={getSpeechProvider().privacyNote} />
-        </>
+      header={
+        <PaneHeader title={s.navigatorPane} language="English">
+          <select
+            aria-label={s.loadSample}
+            className="field !h-[30px] !w-auto !rounded-full !px-3 text-[13px]"
+            value=""
+            onChange={(e) => {
+              const n = sampleNeighbors.find((x) => x.id === e.target.value);
+              if (n) dispatch({ type: "LOAD_VALUES", values: n.values });
+            }}
+          >
+            <option value="">{s.loadSample}…</option>
+            {sampleNeighbors.map((n) => (
+              <option key={n.id} value={n.id}>
+                {n.description}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => confirm("Clear the conversation, form, and flags?") && dispatch({ type: "RESET" })}
+            className="btn btn-sm btn-gray"
+          >
+            {s.reset}
+          </button>
+        </PaneHeader>
       }
+      bottom={<Conversation viewer="navigator" footnote={getSpeechProvider().privacyNote} />}
     >
       <FormView viewer="navigator" />
 
