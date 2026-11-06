@@ -16,10 +16,6 @@ describe("draft → neighbor Yes/No → navigator Confirm", () => {
     s = sessionReducer(s, { type: "NAVIGATOR_CONFIRM", fieldId: "householdSize" });
     expect(s.fields.householdSize.confirmed).toBe(false);
 
-    s = sessionReducer(s, { type: "NEIGHBOR_ANSWER", fieldId: "householdSize", answer: "no" });
-    s = sessionReducer(s, { type: "NAVIGATOR_CONFIRM", fieldId: "householdSize" });
-    expect(s.fields.householdSize.confirmed).toBe(false);
-
     s = sessionReducer(s, { type: "NEIGHBOR_ANSWER", fieldId: "householdSize", answer: "yes" });
     s = sessionReducer(s, { type: "NAVIGATOR_CONFIRM", fieldId: "householdSize" });
     expect(s.fields.householdSize).toMatchObject({ value: "3", confirmed: true });
@@ -33,6 +29,12 @@ describe("draft → neighbor Yes/No → navigator Confirm", () => {
     expect(s.fields.grossIncome.confirmed).toBe(false);
   });
 
+  it("a value with nothing to show can't be answered", () => {
+    let s = sessionReducer(start(), propose("grossIncome", ""));
+    s = sessionReducer(s, { type: "NEIGHBOR_ANSWER", fieldId: "grossIncome", answer: "yes" });
+    expect(s.fields.grossIncome.neighborAnswer).toBeUndefined();
+  });
+
   it("a new value clears the neighbor's answer but keeps the old confirmed value until re-confirmed", () => {
     let s = sessionReducer(start(), propose("householdSize", "3"));
     s = sessionReducer(s, { type: "NEIGHBOR_ANSWER", fieldId: "householdSize", answer: "yes" });
@@ -43,27 +45,50 @@ describe("draft → neighbor Yes/No → navigator Confirm", () => {
     expect(submitReadiness(s, snapSampleForm).pending).toContain("householdSize");
   });
 
-  it("an unclear draft can be resolved by the navigator, then answered and confirmed", () => {
+  it("an unclear draft is only replaced by a new, complete answer", () => {
     let s = sessionReducer(start(), propose("grossIncome", "2000", { unclear: true, ask: "before or after taxes?" }));
-    s = sessionReducer(s, { type: "RESOLVE_UNCLEAR", fieldId: "grossIncome" });
+    s = sessionReducer(s, propose("grossIncome", "2000/monthly", { quote: "dos mil al mes antes de impuestos" } as never));
     s = sessionReducer(s, { type: "NEIGHBOR_ANSWER", fieldId: "grossIncome", answer: "yes" });
     s = sessionReducer(s, { type: "NAVIGATOR_CONFIRM", fieldId: "grossIncome" });
-    expect(s.fields.grossIncome).toMatchObject({ value: "2000", confirmed: true });
+    expect(s.fields.grossIncome).toMatchObject({ value: "2000/monthly", confirmed: true });
   });
+});
 
-  it("after a No, the navigator can ask again (button or re-entering the same value)", () => {
+describe("guardrail 4: the neighbor's No is final", () => {
+  const rejected = () => {
     let s = sessionReducer(start(), propose("householdSize", "3"));
     s = sessionReducer(s, { type: "NEIGHBOR_ANSWER", fieldId: "householdSize", answer: "no" });
-    s = sessionReducer(s, { type: "ASK_AGAIN", fieldId: "householdSize" });
-    expect(s.fields.householdSize.neighborAnswer).toBeUndefined();
+    return s;
+  };
 
-    s = sessionReducer(s, { type: "NEIGHBOR_ANSWER", fieldId: "householdSize", answer: "no" });
-    s = sessionReducer(s, propose("householdSize", "3", { origin: "navigator" }));
-    expect(s.fields.householdSize.neighborAnswer).toBeUndefined();
+  it("No sets the value aside: nothing left to answer or confirm", () => {
+    const s = rejected();
+    expect(s.fields.householdSize.pending).toBeUndefined();
+    expect(s.fields.householdSize.rejected).toMatchObject({ value: "3" });
+    expect(s.fields.householdSize.confirmed).toBe(false);
+  });
 
+  it("No can't be switched back to Sí, and Confirm does nothing", () => {
+    let s = rejected();
     s = sessionReducer(s, { type: "NEIGHBOR_ANSWER", fieldId: "householdSize", answer: "yes" });
     s = sessionReducer(s, { type: "NAVIGATOR_CONFIRM", fieldId: "householdSize" });
-    expect(s.fields.householdSize.confirmed).toBe(true);
+    expect(s.fields.householdSize.confirmed).toBe(false);
+    expect(s.fields.householdSize.neighborAnswer).toBeUndefined();
+  });
+
+  it("a new answer (said again or re-typed) clears the rejection and must be answered again", () => {
+    let s = rejected();
+    s = sessionReducer(s, propose("householdSize", "4", { origin: "navigator" }));
+    expect(s.fields.householdSize.rejected).toBeUndefined();
+    s = sessionReducer(s, { type: "NAVIGATOR_CONFIRM", fieldId: "householdSize" });
+    expect(s.fields.householdSize.confirmed).toBe(false);
+    s = sessionReducer(s, { type: "NEIGHBOR_ANSWER", fieldId: "householdSize", answer: "yes" });
+    s = sessionReducer(s, { type: "NAVIGATOR_CONFIRM", fieldId: "householdSize" });
+    expect(s.fields.householdSize).toMatchObject({ value: "4", confirmed: true });
+  });
+
+  it("a rejected field still blocks submit if it's required", () => {
+    expect(submitReadiness(rejected(), snapSampleForm).missingRequired).toContain("householdSize");
   });
 
   it("a confirmed value can be corrected and confirmed again", () => {

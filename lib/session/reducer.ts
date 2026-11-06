@@ -71,11 +71,10 @@ export function sessionReducer(state: SessionState, action: SessionAction): Sess
       const value = action.pending.value.trim();
       // Same as what's already confirmed and nothing to ask: nothing to do.
       if (prev.confirmed && prev.value === value && !action.pending.unclear && !prev.pending) return state;
-      // Re-proposing the identical pending value keeps the neighbor's answer,
-      // unless the navigator re-enters it after a "No" (that means: ask again).
-      const reAskAfterNo = action.pending.origin === "navigator" && prev.neighborAnswer === "no";
-      if (prev.pending && prev.pending.value === value && prev.pending.unclear === action.pending.unclear && !reAskAfterNo) return state;
-      return withField(state, action.fieldId, { ...prev, pending: { ...action.pending, value }, neighborAnswer: undefined });
+      // Re-proposing the identical pending value keeps the neighbor's answer.
+      if (prev.pending && prev.pending.value === value && prev.pending.unclear === action.pending.unclear) return state;
+      // A new answer replaces any rejected one and must be answered again.
+      return withField(state, action.fieldId, { ...prev, pending: { ...action.pending, value }, neighborAnswer: undefined, rejected: undefined });
     }
 
     case "LOAD_VALUES": {
@@ -90,8 +89,14 @@ export function sessionReducer(state: SessionState, action: SessionAction): Sess
     case "NEIGHBOR_ANSWER": {
       if (state.submitted) return state;
       const prev = state.fields[action.fieldId];
-      if (!prev?.pending || prev.pending.unclear) return state; // nothing to answer, or the navigator must ask first
-      return withField(state, action.fieldId, { ...prev, neighborAnswer: action.answer });
+      if (!prev?.pending || prev.pending.unclear || prev.pending.value === "") return state; // nothing to answer, or the navigator must ask first
+      if (action.answer === "no") {
+        // Guardrail 4: "No" is final for this value. It can't be switched to Sí or confirmed.
+        const { pending, neighborAnswer: _a, ...rest } = prev;
+        void _a;
+        return withField(state, action.fieldId, { ...rest, rejected: pending });
+      }
+      return withField(state, action.fieldId, { ...prev, neighborAnswer: "yes" });
     }
 
     case "NAVIGATOR_CONFIRM": {
@@ -111,18 +116,6 @@ export function sessionReducer(state: SessionState, action: SessionAction): Sess
       const prev = state.fields[action.fieldId];
       if (!prev?.pending || state.submitted) return state;
       return withField(state, action.fieldId, { value: prev.value, confirmed: prev.confirmed, ...(prev.source ? { source: prev.source } : {}) });
-    }
-
-    case "RESOLVE_UNCLEAR": {
-      const prev = state.fields[action.fieldId];
-      if (!prev?.pending?.unclear || state.submitted) return state;
-      return withField(state, action.fieldId, { ...prev, pending: { ...prev.pending, unclear: false, ask: "" }, neighborAnswer: undefined });
-    }
-
-    case "ASK_AGAIN": {
-      const prev = state.fields[action.fieldId];
-      if (!prev?.pending || state.submitted) return state;
-      return withField(state, action.fieldId, { ...prev, neighborAnswer: undefined });
     }
 
     case "SET_MESSAGE_DRAFTS":

@@ -44,7 +44,12 @@ export interface FieldState {
   source?: ValueSource;
   pending?: PendingValue;
   /** The neighbor's answer about `pending`. Cleared whenever `pending` changes. */
-  neighborAnswer?: "yes" | "no";
+  neighborAnswer?: "yes";
+  /**
+   * Guardrail 4: a value the neighbor said No to. It can't be answered or
+   * confirmed again; only a new answer (said again or re-typed) moves on.
+   */
+  rejected?: PendingValue;
 }
 
 export type FlagTarget =
@@ -95,10 +100,6 @@ export type SessionAction =
   | { type: "NEIGHBOR_ANSWER"; fieldId: string; answer: "yes" | "no" }
   | { type: "NAVIGATOR_CONFIRM"; fieldId: string }
   | { type: "DISCARD_PENDING"; fieldId: string }
-  /** Navigator asked the neighbor and the pending value is now clear (units, gross/net). */
-  | { type: "RESOLVE_UNCLEAR"; fieldId: string }
-  /** Navigator clears the neighbor's answer so they can answer Sí/No again. */
-  | { type: "ASK_AGAIN"; fieldId: string }
   | { type: "SET_MESSAGE_DRAFTS"; id: string; fieldIds: string[] }
   | { type: "ADD_FLAG"; flag: Flag }
   | { type: "REMOVE_FLAG"; id: string }

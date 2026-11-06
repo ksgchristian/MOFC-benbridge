@@ -64,9 +64,12 @@ const en = {
   answeredNo: "You said No",
   pending: "Pending",
   currentQuestion: "Current question",
-  markClear: "I asked. It's clear now",
-  askAgain: "Ask again",
-  fixHint: "Fix the value above (press Enter), or ask again.",
+  neighborIsAsked: "Neighbor is asked",
+  neighborSaidNoTo: "Neighbor said No to",
+  rejectedFixHint: "Ask again in the conversation, or type the correct value above. A new answer will be checked again.",
+  unclearFixHint: "Ask, then get the full answer said again in the conversation, or type it above. This can't be confirmed as is.",
+  youSaidNo: "You said No.",
+  sayOrTypeAgain: "Say or type the right answer.",
   doubleTapHint: "Double-tap a question to mark where you are. It lights up on both sides.",
 };
 
@@ -133,9 +136,12 @@ const es: UiStrings = {
   answeredNo: "Usted dijo No",
   pending: "Pendiente",
   currentQuestion: "Pregunta actual",
-  markClear: "Ya pregunté, está claro",
-  askAgain: "Preguntar de nuevo",
-  fixHint: "Corrija el valor arriba (Enter) o pregunte de nuevo.",
+  neighborIsAsked: "Se le pregunta",
+  neighborSaidNoTo: "Usted dijo No a",
+  rejectedFixHint: "Pregunte de nuevo o escriba el valor correcto. La nueva respuesta se revisa otra vez.",
+  unclearFixHint: "Pregunte y obtenga la respuesta completa otra vez.",
+  youSaidNo: "Usted dijo No.",
+  sayOrTypeAgain: "Diga o escriba la respuesta correcta.",
   doubleTapHint: "Toque dos veces una pregunta para marcar dónde están. Se ilumina en ambos lados.",
 };
 

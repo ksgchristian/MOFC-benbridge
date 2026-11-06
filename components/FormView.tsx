@@ -10,6 +10,7 @@ import type { LangCode } from "@/lib/languages";
 import { usePauseScrollSync } from "@/lib/scrollSync";
 import { ASK } from "@/lib/draft/normalize";
 import { canConfirm } from "@/lib/session/reducer";
+import { buildReadback, readbackToString } from "@/lib/readback";
 import { numbersCheckOut } from "@/lib/verify/fieldNumbers";
 import { useSession } from "@/lib/session/SessionContext";
 import type { FieldState, PendingValue, Speaker } from "@/lib/session/types";
@@ -193,6 +194,16 @@ function NavigatorField({ field, fs, inputId, s, labels }: { field: FormField; f
       <FieldInput key={`${p?.value ?? fs.value}`} id={inputId} field={field} initial={p?.value ?? fs.value} onCommit={propose} onFocus={markCurrent} />
       <ConfirmedValue field={field} fs={fs} lang="en" labels={labels} s={s} />
 
+      {!p && fs.rejected && (
+        <div className="inset-box space-y-1 bg-[var(--danger-soft)]">
+          <p className="flex items-start gap-1.5 text-[13px] font-medium text-[var(--danger)]">
+            <AlertIcon size={14} className="mt-0.5 shrink-0" />
+            {s.neighborSaidNoTo} “{displayValue(field, fs.rejected.value, "en", labels.t)}”.
+          </p>
+          <p className="text-[12px] text-[var(--fg-muted)]">{s.rejectedFixHint}</p>
+        </div>
+      )}
+
       {p && (
         <div className={`inset-box space-y-2.5 ${blocked ? "bg-[var(--warn-soft)]" : "bg-[var(--fill)]"}`}>
           <div className="flex flex-wrap items-center gap-2">
@@ -213,29 +224,20 @@ function NavigatorField({ field, fs, inputId, s, labels }: { field: FormField; f
               <AlertIcon size={14} className="mt-0.5 shrink-0" /> {s.unclearAsk} {p.ask}
             </p>
           ) : (
-            <p
-              className={`text-[13px] font-medium ${
-                fs.neighborAnswer === "no" ? "text-[var(--danger)]" : fs.neighborAnswer === "yes" ? "text-[var(--accent)]" : "text-[var(--fg-muted)]"
-              }`}
-            >
-              {fs.neighborAnswer === "yes" ? s.neighborSaidYes : fs.neighborAnswer === "no" ? s.neighborSaidNo : s.waitingForNeighbor}
-            </p>
+            <>
+              <p className="text-[13px] text-[var(--fg-muted)]">
+                {s.neighborIsAsked}: <span className="italic">“{readbackToString(buildReadback(field, p.value, "en", labels.t))}”</span>
+              </p>
+              <p className={`text-[13px] font-medium ${fs.neighborAnswer === "yes" ? "text-[var(--accent)]" : "text-[var(--fg-muted)]"}`}>
+                {fs.neighborAnswer === "yes" ? s.neighborSaidYes : s.waitingForNeighbor}
+              </p>
+            </>
           )}
-          {fs.neighborAnswer === "no" && <p className="text-[12px] text-[var(--fg-muted)]">{s.fixHint}</p>}
+          {p.unclear && <p className="text-[12px] text-[var(--fg-muted)]">{s.unclearFixHint}</p>}
           <div className="flex flex-wrap gap-2">
-            {p.unclear ? (
-              <button type="button" onClick={() => dispatch({ type: "RESOLVE_UNCLEAR", fieldId: field.id })} className="btn btn-sm btn-tinted">
-                {s.markClear}
-              </button>
-            ) : fs.neighborAnswer === "no" ? (
-              <button type="button" onClick={() => dispatch({ type: "ASK_AGAIN", fieldId: field.id })} className="btn btn-sm btn-tinted">
-                {s.askAgain}
-              </button>
-            ) : (
-              <button type="button" disabled={!canConfirm(fs) || !numbersOk} onClick={() => dispatch({ type: "NAVIGATOR_CONFIRM", fieldId: field.id })} className="btn btn-sm btn-primary">
-                <CheckIcon size={14} /> {s.confirm}
-              </button>
-            )}
+            <button type="button" disabled={!canConfirm(fs) || !numbersOk} onClick={() => dispatch({ type: "NAVIGATOR_CONFIRM", fieldId: field.id })} className="btn btn-sm btn-primary">
+              <CheckIcon size={14} /> {s.confirm}
+            </button>
             <button type="button" onClick={() => dispatch({ type: "DISCARD_PENDING", fieldId: field.id })} className="btn btn-sm btn-plain">
               {s.discard}
             </button>
@@ -266,6 +268,15 @@ function NeighborField({
   const { dispatch } = useSession();
   const p = fs.pending;
 
+  if (!p && fs.rejected) {
+    return (
+      <div id={inputId} className="inset-box space-y-1 bg-[var(--danger-soft)]">
+        <p className="text-[17px] font-semibold text-[var(--danger)]">{s.youSaidNo}</p>
+        <p className="text-[15px]">{s.sayOrTypeAgain}</p>
+      </div>
+    );
+  }
+
   if (!p) {
     const shown = fs.confirmed && confirmedNumbersOk(field, fs) ? displayValue(field, fs.value, lang, labels.t) : "";
     return shown ? (
@@ -280,31 +291,48 @@ function NeighborField({
   }
 
   const numbersOk = pendingNumbersOk(field, p);
-  const shown = numbersOk ? displayValue(field, p.value, lang, labels.t) : "";
+  // Guardrail 4: nothing to answer until the value is complete and its numbers check out.
+  if (p.unclear || !numbersOk || p.value === "") {
+    return (
+      <div id={inputId} className="inset-box bg-[var(--fill)]">
+        <p className="text-[15px] text-[var(--fg-muted)]">{s.navigatorWillAsk}</p>
+      </div>
+    );
+  }
+
+  const question = buildReadback(field, p.value, lang, labels.t);
   return (
-    <div id={inputId} className="inset-box space-y-3 bg-[var(--fill)]">
-      <p className="text-[20px] font-semibold leading-snug">{shown ? <Highlighted text={shown} lang={lang} /> : "—"}</p>
+    <div id={inputId} className="inset-box space-y-4 bg-[var(--surface)] shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
+      {/* The answer as a question, with the number and unit large and high-contrast. */}
+      <p lang={lang} className="text-[22px] leading-snug text-[var(--fg)]">
+        {question.map((seg, i) =>
+          seg.emphasis ? (
+            <strong key={i} className="text-[28px] font-bold text-[var(--fg)]">
+              {seg.text}
+            </strong>
+          ) : (
+            <span key={i}>{seg.text}</span>
+          ),
+        )}
+      </p>
       <Provenance origin={p.origin} quote={p.quote} s={s} />
-      {p.unclear || !numbersOk ? (
-        <p className="text-[13px] text-[var(--fg-muted)]">{s.navigatorWillAsk}</p>
+      {fs.neighborAnswer === "yes" ? (
+        <p className="flex items-center gap-2 text-[17px] font-semibold text-[var(--accent)]">
+          <CheckIcon size={18} /> {s.answeredYes}
+        </p>
       ) : (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="mr-1 text-[15px]">{s.isThisRight}</span>
+        <div className="grid grid-cols-2 gap-3">
           <button
             type="button"
-            aria-pressed={fs.neighborAnswer === "yes"}
             onClick={() => dispatch({ type: "NEIGHBOR_ANSWER", fieldId: field.id, answer: "yes" })}
-            className={`btn min-w-20 ${fs.neighborAnswer === "yes" ? "btn-primary" : "btn-tinted"}`}
+            className="btn btn-primary !h-[52px] text-[19px] font-semibold"
           >
-            {fs.neighborAnswer === "yes" && <CheckIcon size={15} />} {s.yes}
+            {s.yes}
           </button>
           <button
             type="button"
-            aria-pressed={fs.neighborAnswer === "no"}
             onClick={() => dispatch({ type: "NEIGHBOR_ANSWER", fieldId: field.id, answer: "no" })}
-            className={`btn min-w-20 ${
-              fs.neighborAnswer === "no" ? "bg-[var(--danger)] text-white" : "bg-[var(--danger-soft)] text-[var(--danger)]"
-            }`}
+            className="btn !h-[52px] bg-[var(--danger)] text-[19px] font-semibold text-white"
           >
             {s.no}
           </button>

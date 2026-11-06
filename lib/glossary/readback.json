@@ -1,0 +1,24 @@
+{
+  "_note": "Guardrail 4: how each answer is read back to the neighbor as a yes/no question before the navigator can confirm it. Placeholders: {value}, {amount}, {period}. Yes/no fields have one question per answer. Spanish is DRAFT wording for MOFC review; set reviewed to true once approved. Fields without an entry use _default.",
+
+  "_default": { "es": "Anotamos: {value}. ¿Es correcto?", "en": "We wrote down: {value}. Is that right?", "reviewed": false },
+
+  "fullName": { "es": "¿Su nombre completo es {value}?", "en": "Is your full name {value}?", "reviewed": false },
+  "dob": { "es": "¿Nació el {value}?", "en": "Were you born on {value}?", "reviewed": false },
+  "phone": { "es": "¿Su número de teléfono es {value}?", "en": "Is your phone number {value}?", "reviewed": false },
+  "address": { "es": "¿Su dirección es {value}?", "en": "Is your address {value}?", "reviewed": false },
+  "preferredLanguage": { "es": "¿Prefiere hablar en {value}?", "en": "Do you prefer to speak {value}?", "reviewed": false },
+  "householdSize": { "es": "¿Son {value} personas en su hogar?", "en": "Are there {value} people in your household?", "reviewed": false },
+  "hasChildrenUnder18": {
+    "yes": { "es": "¿Hay menores de 18 años en su hogar?", "en": "Are there children under 18 in your household?", "reviewed": false },
+    "no": { "es": "¿No hay menores de 18 años en su hogar?", "en": "Are there no children under 18 in your household?", "reviewed": false }
+  },
+  "grossIncome": { "es": "¿Gana {amount} {period}, antes de impuestos?", "en": "Do you earn {amount} {period}, before taxes?", "reviewed": false },
+  "netIncome": { "es": "¿Recibe {amount} {period}, después de impuestos?", "en": "Do you take home {amount} {period}, after taxes?", "reviewed": false },
+  "incomeSource": { "es": "¿Su fuente principal de ingresos es: {value}?", "en": "Is your main source of income: {value}?", "reviewed": false },
+  "rent": { "es": "¿Paga {amount} {period} de renta o hipoteca?", "en": "Do you pay {amount} {period} for rent or mortgage?", "reviewed": false },
+  "paysUtilities": {
+    "yes": { "es": "¿Usted paga servicios públicos (gas, luz, agua)?", "en": "Do you pay utilities (gas, electric, water)?", "reviewed": false },
+    "no": { "es": "¿Usted no paga servicios públicos (gas, luz, agua)?", "en": "Do you not pay utilities (gas, electric, water)?", "reviewed": false }
+  }
+}

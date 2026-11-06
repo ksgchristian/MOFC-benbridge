@@ -42,6 +42,12 @@ export function formatAmount(n: number): string {
 }
 
 export function formatMoney(money: Money, lang: LangCode): string {
-  const amount = new Intl.NumberFormat(lang === "en" ? "en-US" : `${lang}-US`, { style: "currency", currency: "USD" }).format(money.amount);
+  const whole = Number.isInteger(money.amount);
+  const amount = new Intl.NumberFormat(lang === "en" ? "en-US" : `${lang}-US`, {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: whole ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(money.amount);
   return money.period ? `${amount} ${PERIOD_LABEL[money.period][lang === "es" ? "es" : "en"]}` : amount;
 }
