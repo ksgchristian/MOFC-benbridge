@@ -8,6 +8,7 @@
  * field that no longer exists. A stale eval that goes green is worse than none.
  */
 import { draftFields } from "@/lib/draft/claude";
+import { ASK } from "@/lib/draft/normalize";
 import { FieldDraftShape, type FieldDraft, type UnclearReason } from "@/lib/draft/schema";
 import { allFields } from "@/lib/forms/schema";
 import { snapSampleForm as form } from "@/lib/forms/snap-sample";
@@ -43,6 +44,24 @@ const unclear = (field: string, reason?: UnclearReason): Check => ({
     if (!got) return `${field} not drafted (expected an unclear draft)`;
     if (!got.unclear) return `${field} = ${got.value} drafted as clear, expected unclear`;
     if (reason && got.reason !== reason) return `${field} unclear for ${got.reason}, expected ${reason}`;
+    return null;
+  },
+});
+/**
+ * Drafted as UNCLEAR with every one of these questions in its "Ask:". Used for
+ * ambiguous lines, which must never come back as nothing (silence looks the
+ * same as "nothing was said").
+ */
+const asks = (field: string, reasons: UnclearReason[], value?: string): Check => ({
+  field,
+  run: (d) => {
+    const got = d.get(field);
+    if (!got) return `${field} not drafted: an ambiguous value was silently dropped (expected an unclear draft)`;
+    if (!got.unclear) return `${field} = ${got.value} drafted as clear, expected unclear`;
+    if (!got.ask.trim()) return `${field} is unclear but has no "Ask:" prompt`;
+    const missing = reasons.filter((r) => !got.ask.includes(ASK[r]));
+    if (missing.length) return `${field} ask is missing: ${missing.join(", ")} (got: ${got.ask})`;
+    if (value !== undefined && got.value !== value) return `${field} = ${got.value || "∅"}, expected ${value || "∅"}`;
     return null;
   },
 });
@@ -89,6 +108,13 @@ const CASES: Case[] = [
     context: [{ speaker: "navigator", text: "How many people live in your household, including you?" }],
     checks: [value("householdSize", "4")],
   },
+  // Ambiguous lines: once dropped silently (the model returned no field at all). Each must be a visible question.
+  { name: "amount only, no period or gross/net → asks both", speaker: "neighbor", lang: "es", transcript: "gano dos mil", checks: [asks("grossIncome", ["period", "income_type"], "2000")] },
+  { name: "digits only, no labels → asks both", speaker: "neighbor", lang: "es", transcript: "gano 2000", checks: [asks("grossIncome", ["period", "income_type"], "2000")] },
+  { name: "approximate, no labels → asks all three", speaker: "neighbor", lang: "es", transcript: "gano como dos mil", checks: [asks("grossIncome", ["period", "income_type", "approximate"], "2000")] },
+  { name: "missing period only → asks how often", speaker: "neighbor", lang: "es", transcript: "gano dos mil antes de impuestos", checks: [asks("grossIncome", ["period"], "2000")] },
+  { name: "missing gross/net only → asks before/after taxes", speaker: "neighbor", lang: "es", transcript: "me pagan dos mil al mes", checks: [asks("grossIncome", ["income_type"], "2000/monthly")] },
+  { name: "household with no count → asks how many", speaker: "neighbor", lang: "es", transcript: "vivo con mi familia", checks: [asks("householdSize", ["household"], "")] },
   { name: "navigator relays in English with filler", speaker: "navigator", lang: "en", transcript: "um so she says four people live there", checks: [value("householdSize", "4")] },
   { name: "a question drafts nothing", speaker: "navigator", lang: "en", transcript: "what is your gross monthly income before taxes", checks: [notClear("grossIncome")] },
 ];
