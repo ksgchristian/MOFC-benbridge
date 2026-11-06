@@ -43,6 +43,39 @@ describe("draft → neighbor Yes/No → navigator Confirm", () => {
     expect(submitReadiness(s, snapSampleForm).pending).toContain("householdSize");
   });
 
+  it("an unclear draft can be resolved by the navigator, then answered and confirmed", () => {
+    let s = sessionReducer(start(), propose("grossMonthlyIncome", "2000", { unclear: true, ask: "before or after taxes?" }));
+    s = sessionReducer(s, { type: "RESOLVE_UNCLEAR", fieldId: "grossMonthlyIncome" });
+    s = sessionReducer(s, { type: "NEIGHBOR_ANSWER", fieldId: "grossMonthlyIncome", answer: "yes" });
+    s = sessionReducer(s, { type: "NAVIGATOR_CONFIRM", fieldId: "grossMonthlyIncome" });
+    expect(s.fields.grossMonthlyIncome).toEqual({ value: "2000", confirmed: true });
+  });
+
+  it("after a No, the navigator can ask again (button or re-entering the same value)", () => {
+    let s = sessionReducer(start(), propose("householdSize", "3"));
+    s = sessionReducer(s, { type: "NEIGHBOR_ANSWER", fieldId: "householdSize", answer: "no" });
+    s = sessionReducer(s, { type: "ASK_AGAIN", fieldId: "householdSize" });
+    expect(s.fields.householdSize.neighborAnswer).toBeUndefined();
+
+    s = sessionReducer(s, { type: "NEIGHBOR_ANSWER", fieldId: "householdSize", answer: "no" });
+    s = sessionReducer(s, propose("householdSize", "3", { origin: "navigator" }));
+    expect(s.fields.householdSize.neighborAnswer).toBeUndefined();
+
+    s = sessionReducer(s, { type: "NEIGHBOR_ANSWER", fieldId: "householdSize", answer: "yes" });
+    s = sessionReducer(s, { type: "NAVIGATOR_CONFIRM", fieldId: "householdSize" });
+    expect(s.fields.householdSize.confirmed).toBe(true);
+  });
+
+  it("a confirmed value can be corrected and confirmed again", () => {
+    let s = sessionReducer(start(), propose("householdSize", "3"));
+    s = sessionReducer(s, { type: "NEIGHBOR_ANSWER", fieldId: "householdSize", answer: "yes" });
+    s = sessionReducer(s, { type: "NAVIGATOR_CONFIRM", fieldId: "householdSize" });
+    s = sessionReducer(s, propose("householdSize", "4", { origin: "navigator" }));
+    s = sessionReducer(s, { type: "NEIGHBOR_ANSWER", fieldId: "householdSize", answer: "yes" });
+    s = sessionReducer(s, { type: "NAVIGATOR_CONFIRM", fieldId: "householdSize" });
+    expect(s.fields.householdSize).toEqual({ value: "4", confirmed: true });
+  });
+
   it("discard drops the pending value", () => {
     let s = sessionReducer(start(), propose("householdSize", "3"));
     s = sessionReducer(s, { type: "DISCARD_PENDING", fieldId: "householdSize" });

@@ -64,6 +64,9 @@ const en = {
   answeredNo: "You said No",
   pending: "Pending",
   currentQuestion: "Current question",
+  markClear: "I asked. It's clear now",
+  askAgain: "Ask again",
+  fixHint: "Fix the value above (press Enter), or ask again.",
   doubleTapHint: "Double-tap a question to mark where you are. It lights up on both sides.",
 };
 
@@ -130,6 +133,9 @@ const es: UiStrings = {
   answeredNo: "Usted dijo No",
   pending: "Pendiente",
   currentQuestion: "Pregunta actual",
+  markClear: "Ya pregunté, está claro",
+  askAgain: "Preguntar de nuevo",
+  fixHint: "Corrija el valor arriba (Enter) o pregunte de nuevo.",
   doubleTapHint: "Toque dos veces una pregunta para marcar dónde están. Se ilumina en ambos lados.",
 };
 

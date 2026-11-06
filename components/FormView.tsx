@@ -179,10 +179,21 @@ function NavigatorField({ field, fs, inputId, s, labels }: { field: FormField; f
               {fs.neighborAnswer === "yes" ? s.neighborSaidYes : fs.neighborAnswer === "no" ? s.neighborSaidNo : s.waitingForNeighbor}
             </p>
           )}
-          <div className="flex gap-2">
-            <button type="button" disabled={!canConfirm(fs)} onClick={() => dispatch({ type: "NAVIGATOR_CONFIRM", fieldId: field.id })} className="btn btn-sm btn-primary">
-              <CheckIcon size={14} /> {s.confirm}
-            </button>
+          {fs.neighborAnswer === "no" && <p className="text-[12px] text-[var(--fg-muted)]">{s.fixHint}</p>}
+          <div className="flex flex-wrap gap-2">
+            {p.unclear ? (
+              <button type="button" onClick={() => dispatch({ type: "RESOLVE_UNCLEAR", fieldId: field.id })} className="btn btn-sm btn-tinted">
+                {s.markClear}
+              </button>
+            ) : fs.neighborAnswer === "no" ? (
+              <button type="button" onClick={() => dispatch({ type: "ASK_AGAIN", fieldId: field.id })} className="btn btn-sm btn-tinted">
+                {s.askAgain}
+              </button>
+            ) : (
+              <button type="button" disabled={!canConfirm(fs)} onClick={() => dispatch({ type: "NAVIGATOR_CONFIRM", fieldId: field.id })} className="btn btn-sm btn-primary">
+                <CheckIcon size={14} /> {s.confirm}
+              </button>
+            )}
             <button type="button" onClick={() => dispatch({ type: "DISCARD_PENDING", fieldId: field.id })} className="btn btn-sm btn-plain">
               {s.discard}
             </button>
@@ -279,8 +290,8 @@ function FieldInput({
   onFocus: () => void;
 }) {
   const [v, setV] = useState(initial);
-  const commit = () => {
-    if (v !== initial) onCommit(v);
+  const commit = (force = false) => {
+    if (force || v !== initial) onCommit(v);
   };
 
   if (field.type === "select" || field.type === "yesno") {
@@ -321,11 +332,11 @@ function FieldInput({
       value={v}
       onFocus={onFocus}
       onChange={(e) => setV(e.target.value)}
-      onBlur={commit}
+      onBlur={() => commit()}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
           e.preventDefault();
-          commit();
+          commit(true); // Enter re-sends even an unchanged value (e.g. to ask again after a "No")
         }
       }}
     />

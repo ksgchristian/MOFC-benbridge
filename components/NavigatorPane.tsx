@@ -28,7 +28,7 @@ export function NavigatorPane() {
         <PaneHeader title={s.navigatorPane} language="English">
           <select
             aria-label={s.loadSample}
-            className="field !h-[30px] !w-auto !rounded-full !px-3 text-[13px]"
+            className="field !h-[30px] !w-auto max-w-[11rem] !rounded-full !px-3 text-[13px]"
             value=""
             onChange={(e) => {
               const n = sampleNeighbors.find((x) => x.id === e.target.value);
@@ -51,7 +51,7 @@ export function NavigatorPane() {
           </button>
         </PaneHeader>
       }
-      bottom={<Conversation viewer="navigator" footnote={getSpeechProvider().privacyNote} />}
+      bottom={<Conversation viewer="navigator" />}
     >
       <FormView viewer="navigator" />
 
@@ -85,6 +85,7 @@ export function NavigatorPane() {
       </div>
 
       <FlagsPanel />
+      <p className="px-1 text-[12px] text-[var(--fg-muted)]">{getSpeechProvider().privacyNote}</p>
     </PaneLayout>
   );
 }
