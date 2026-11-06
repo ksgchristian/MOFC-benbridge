@@ -73,6 +73,10 @@ export function sessionReducer(state: SessionState, action: SessionAction): Sess
       if (prev.confirmed && prev.value === value && !action.pending.unclear && !prev.pending) return state;
       // Re-proposing the identical pending value keeps the neighbor's answer.
       if (prev.pending && prev.pending.value === value && prev.pending.unclear === action.pending.unclear) return state;
+      // An UNCLEAR draft with no new value (e.g. from the neighbor's spoken "sí, antes de impuestos",
+      // which doesn't repeat the number) must not wipe a clear pending value or the neighbor's answer.
+      // An UNCLEAR draft with a different value still replaces it: that is a new value.
+      if (prev.pending && !prev.pending.unclear && action.pending.unclear && (value === "" || value === prev.pending.value)) return state;
       // A new answer replaces any rejected one and must be answered again.
       return withField(state, action.fieldId, { ...prev, pending: { ...action.pending, value }, neighborAnswer: undefined, rejected: undefined });
     }

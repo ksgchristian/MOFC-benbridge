@@ -52,6 +52,27 @@ describe("draft → neighbor Yes/No → navigator Confirm", () => {
     s = sessionReducer(s, { type: "NAVIGATOR_CONFIRM", fieldId: "grossIncome" });
     expect(s.fields.grossIncome).toMatchObject({ value: "2000/monthly", confirmed: true });
   });
+
+  it("a follow-up UNCLEAR draft with no new value keeps the clear value and the neighbor's Yes", () => {
+    let s = sessionReducer(start(), propose("grossIncome", "1200/monthly", { origin: "navigator" }));
+    s = sessionReducer(s, { type: "NEIGHBOR_ANSWER", fieldId: "grossIncome", answer: "yes" });
+    // The neighbor's spoken "sí, antes de impuestos" gets drafted, but the number isn't in that line.
+    s = sessionReducer(s, propose("grossIncome", "", { unclear: true, ask: "Ask again" }));
+    s = sessionReducer(s, propose("grossIncome", "1200/monthly", { unclear: true, ask: "Ask again" }));
+    expect(s.fields.grossIncome).toMatchObject({ pending: { value: "1200/monthly", unclear: false }, neighborAnswer: "yes" });
+    s = sessionReducer(s, { type: "NAVIGATOR_CONFIRM", fieldId: "grossIncome" });
+    expect(s.fields.grossIncome).toMatchObject({ value: "1200/monthly", confirmed: true });
+  });
+
+  it("an UNCLEAR draft with a different value still replaces the clear one and clears the Yes", () => {
+    let s = sessionReducer(start(), propose("grossIncome", "1200/monthly", { origin: "navigator" }));
+    s = sessionReducer(s, { type: "NEIGHBOR_ANSWER", fieldId: "grossIncome", answer: "yes" });
+    s = sessionReducer(s, propose("grossIncome", "1300", { unclear: true, ask: "Ask: how often?" }));
+    expect(s.fields.grossIncome).toMatchObject({ pending: { value: "1300", unclear: true } });
+    expect(s.fields.grossIncome.neighborAnswer).toBeUndefined();
+    s = sessionReducer(s, { type: "NAVIGATOR_CONFIRM", fieldId: "grossIncome" });
+    expect(s.fields.grossIncome.confirmed).toBe(false);
+  });
 });
 
 describe("guardrail 4: the neighbor's No is final", () => {
