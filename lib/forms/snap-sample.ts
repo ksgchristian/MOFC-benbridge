@@ -41,6 +41,7 @@ export const snapSampleForm: FormSchema = {
         {
           id: "householdSize",
           type: "number",
+          allowParts: true,
           required: true,
           label: { en: "How many people are in your household?", es: "¿Cuántas personas hay en su hogar?" },
           help: {
@@ -62,23 +63,21 @@ export const snapSampleForm: FormSchema = {
       title: { en: "Income", es: "Ingresos" },
       fields: [
         {
-          id: "grossMonthlyIncome",
+          id: "grossIncome",
           type: "money",
-          period: "monthly",
           basis: "gross",
           required: true,
-          label: { en: "Gross monthly income (before taxes)", es: "Ingresos brutos mensuales (antes de impuestos)" },
+          label: { en: "Gross income (before taxes)", es: "Ingresos brutos (antes de impuestos)" },
           help: {
-            en: "Total pay before taxes or deductions for everyone in the household.",
-            es: "Pago total antes de impuestos o deducciones de todas las personas del hogar.",
+            en: "Pay before taxes or deductions, and how often it's paid.",
+            es: "Pago antes de impuestos o deducciones, y cada cuánto se lo pagan.",
           },
         },
         {
-          id: "netMonthlyIncome",
+          id: "netIncome",
           type: "money",
-          period: "monthly",
           basis: "net",
-          label: { en: "Net monthly income (after taxes)", es: "Ingresos netos mensuales (después de impuestos)" },
+          label: { en: "Net income (after taxes)", es: "Ingresos netos (después de impuestos)" },
         },
         {
           id: "incomeSource",
@@ -99,7 +98,7 @@ export const snapSampleForm: FormSchema = {
       id: "expenses",
       title: { en: "Housing costs", es: "Gastos de vivienda" },
       fields: [
-        { id: "monthlyRent", type: "money", period: "monthly", label: { en: "Monthly rent or mortgage", es: "Renta o hipoteca mensual" } },
+        { id: "rent", type: "money", label: { en: "Rent or mortgage", es: "Renta o hipoteca" } },
         { id: "paysUtilities", type: "yesno", label: { en: "Do you pay utilities (gas, electric, water)?", es: "¿Paga usted servicios públicos (gas, luz, agua)?" } },
       ],
     },

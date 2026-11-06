@@ -26,11 +26,11 @@ describe("draft → neighbor Yes/No → navigator Confirm", () => {
   });
 
   it("unclear drafts can't be answered or confirmed", () => {
-    let s = sessionReducer(start(), propose("grossMonthlyIncome", "500", { unclear: true, ask: "per week or per month?" }));
-    s = sessionReducer(s, { type: "NEIGHBOR_ANSWER", fieldId: "grossMonthlyIncome", answer: "yes" });
-    expect(s.fields.grossMonthlyIncome.neighborAnswer).toBeUndefined();
-    s = sessionReducer(s, { type: "NAVIGATOR_CONFIRM", fieldId: "grossMonthlyIncome" });
-    expect(s.fields.grossMonthlyIncome.confirmed).toBe(false);
+    let s = sessionReducer(start(), propose("grossIncome", "500", { unclear: true, ask: "per week or per month?" }));
+    s = sessionReducer(s, { type: "NEIGHBOR_ANSWER", fieldId: "grossIncome", answer: "yes" });
+    expect(s.fields.grossIncome.neighborAnswer).toBeUndefined();
+    s = sessionReducer(s, { type: "NAVIGATOR_CONFIRM", fieldId: "grossIncome" });
+    expect(s.fields.grossIncome.confirmed).toBe(false);
   });
 
   it("a new value clears the neighbor's answer but keeps the old confirmed value until re-confirmed", () => {
@@ -44,11 +44,11 @@ describe("draft → neighbor Yes/No → navigator Confirm", () => {
   });
 
   it("an unclear draft can be resolved by the navigator, then answered and confirmed", () => {
-    let s = sessionReducer(start(), propose("grossMonthlyIncome", "2000", { unclear: true, ask: "before or after taxes?" }));
-    s = sessionReducer(s, { type: "RESOLVE_UNCLEAR", fieldId: "grossMonthlyIncome" });
-    s = sessionReducer(s, { type: "NEIGHBOR_ANSWER", fieldId: "grossMonthlyIncome", answer: "yes" });
-    s = sessionReducer(s, { type: "NAVIGATOR_CONFIRM", fieldId: "grossMonthlyIncome" });
-    expect(s.fields.grossMonthlyIncome).toEqual({ value: "2000", confirmed: true });
+    let s = sessionReducer(start(), propose("grossIncome", "2000", { unclear: true, ask: "before or after taxes?" }));
+    s = sessionReducer(s, { type: "RESOLVE_UNCLEAR", fieldId: "grossIncome" });
+    s = sessionReducer(s, { type: "NEIGHBOR_ANSWER", fieldId: "grossIncome", answer: "yes" });
+    s = sessionReducer(s, { type: "NAVIGATOR_CONFIRM", fieldId: "grossIncome" });
+    expect(s.fields.grossIncome).toEqual({ value: "2000", confirmed: true });
   });
 
   it("after a No, the navigator can ask again (button or re-entering the same value)", () => {
@@ -93,8 +93,8 @@ describe("current question", () => {
   it("is shared state that can be set, moved and cleared, and resets with the session", () => {
     let s = sessionReducer(start(), { type: "SET_ACTIVE_FIELD", fieldId: "householdSize" });
     expect(s.activeFieldId).toBe("householdSize");
-    s = sessionReducer(s, { type: "SET_ACTIVE_FIELD", fieldId: "grossMonthlyIncome" });
-    expect(s.activeFieldId).toBe("grossMonthlyIncome");
+    s = sessionReducer(s, { type: "SET_ACTIVE_FIELD", fieldId: "grossIncome" });
+    expect(s.activeFieldId).toBe("grossIncome");
     s = sessionReducer(s, { type: "SET_ACTIVE_FIELD", fieldId: null });
     expect(s.activeFieldId).toBeNull();
     s = sessionReducer(sessionReducer(s, { type: "SET_ACTIVE_FIELD", fieldId: "fullName" }), { type: "RESET" });

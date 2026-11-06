@@ -13,5 +13,5 @@ export async function draftFields(
   req: Pick<DraftRequest, "speaker" | "lang" | "text" | "context">,
 ): Promise<FieldDraft[]> {
   const out = await callClaude(buildDraftSystemPrompt(form), buildDraftUserMessage(req), ModelDrafts);
-  return normalizeDrafts(out.drafts, form);
+  return normalizeDrafts(out.drafts, form, req.text);
 }

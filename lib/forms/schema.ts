@@ -25,12 +25,15 @@ interface BaseField {
  */
 export type FormField =
   | (BaseField & { type: "text" | "date" | "phone" })
-  | (BaseField & { type: "number" })
   | (BaseField & {
+      type: "number";
+      /** The speaker may give the total as parts ("3 adults and 2 children"); code adds them up. */
+      allowParts?: boolean;
+    })
+  | (BaseField & {
+      /** Stored as stated: amount + how often (see lib/forms/money.ts). Never converted. */
       type: "money";
-      /** What the amount must be. Drafts are converted to this period in code. */
-      period?: "monthly";
-      /** Before taxes (gross) or after (net). Drafts with the other basis are re-routed or marked unclear. */
+      /** Income fields only: before taxes (gross) or after (net). Required to be stated. */
       basis?: "gross" | "net";
     })
   | (BaseField & { type: "yesno" })

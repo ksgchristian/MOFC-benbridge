@@ -1,4 +1,5 @@
 import type { LangCode } from "@/lib/languages";
+import { formatMoney, parseMoney } from "./money";
 import { YES_NO_LABELS, type FormField, type LocalizedText } from "./schema";
 
 /**
@@ -20,10 +21,8 @@ export function displayValue(
       return opt ? t(`field.${field.id}.option.${opt.value}`, opt.label) : value;
     }
     case "money": {
-      const n = Number(value);
-      return Number.isFinite(n)
-        ? new Intl.NumberFormat(lang === "en" ? "en-US" : `${lang}-US`, { style: "currency", currency: "USD" }).format(n)
-        : value;
+      const money = parseMoney(value);
+      return money ? formatMoney(money, lang) : value;
     }
     case "date": {
       const d = new Date(`${value}T00:00:00`);

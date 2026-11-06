@@ -51,7 +51,7 @@ export function SessionProvider({ form, children }: { form: FormSchema; children
           dispatch({
             type: "PROPOSE_VALUE",
             fieldId: d.fieldId,
-            pending: { value: d.value, origin: "claude", unclear: d.unclear, ask: d.ask },
+            pending: { value: d.value, origin: "claude", unclear: d.unclear, ask: d.ask, ...(d.math ? { math: d.math } : {}) },
           });
         }
         if (drafts.length) dispatch({ type: "SET_MESSAGE_DRAFTS", id, fieldIds: drafts.map((d) => d.fieldId) });

@@ -26,6 +26,8 @@ export interface PendingValue {
   unclear: boolean;
   /** Question for the navigator to ask when unclear (English). */
   ask: string;
+  /** Arithmetic shown under the value, e.g. "3 adults + 2 children = 5" (done in code). */
+  math?: string;
 }
 
 export interface FieldState {

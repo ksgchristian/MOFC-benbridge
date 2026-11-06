@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ui, type UiStrings } from "@/lib/i18n/ui";
 import { displayValue } from "@/lib/forms/display";
+import { encodeMoney, parseMoney, PERIOD_LABEL, PERIODS, type Period } from "@/lib/forms/money";
 import { YES_NO_LABELS, type FormField } from "@/lib/forms/schema";
 import { useFormLabels } from "@/lib/forms/useFormLabels";
 import type { LangCode } from "@/lib/languages";
@@ -162,6 +163,7 @@ function NavigatorField({ field, fs, inputId, s, labels }: { field: FormField; f
             </span>
             <span className="text-[17px] font-semibold">{shown ? <Highlighted text={shown} lang="en" /> : "—"}</span>
           </div>
+          {p.math && <p className="text-[13px] text-[var(--fg-muted)]">{p.math}</p>}
           {p.unclear ? (
             <p className="flex items-start gap-1.5 text-[13px] font-medium text-[var(--warn)]">
               <AlertIcon size={14} className="mt-0.5 shrink-0" /> {s.unclearAsk} {p.ask}
@@ -316,14 +318,15 @@ function FieldInput({
     );
   }
 
-  const type = field.type === "money" || field.type === "number" ? "number" : field.type === "phone" ? "tel" : field.type;
+  if (field.type === "money") return <MoneyInput id={id} initial={initial} onCommit={onCommit} onFocus={onFocus} />;
+
+  const type = field.type === "number" ? "number" : field.type === "phone" ? "tel" : field.type;
   return (
     <input
       id={id}
       className="field"
       type={type}
       min={type === "number" ? 0 : undefined}
-      step={field.type === "money" ? "0.01" : undefined}
       inputMode={type === "number" ? "decimal" : undefined}
       value={v}
       onFocus={onFocus}
@@ -336,5 +339,62 @@ function FieldInput({
         }
       }}
     />
+  );
+}
+
+/**
+ * Money is entered as stated: amount + how often. Nothing is converted.
+ * Proposes once both parts are filled (on blur / Enter / choosing how often).
+ */
+function MoneyInput({ id, initial, onCommit, onFocus }: { id: string; initial: string; onCommit: (v: string) => void; onFocus: () => void }) {
+  const start = parseMoney(initial);
+  const [amount, setAmount] = useState(start ? String(start.amount) : "");
+  const [period, setPeriod] = useState<Period | "">(start?.period ?? "");
+  const commit = (a: string, p: Period | "", force = false) => {
+    const n = Number(a);
+    if (a.trim() === "" || !Number.isFinite(n) || n < 0 || !p) return;
+    const v = encodeMoney(n, p);
+    if (force || v !== initial) onCommit(v);
+  };
+  return (
+    <div className="flex gap-2">
+      <input
+        id={id}
+        className="field"
+        type="number"
+        min={0}
+        step="0.01"
+        inputMode="decimal"
+        placeholder="Amount"
+        value={amount}
+        onFocus={onFocus}
+        onChange={(e) => setAmount(e.target.value)}
+        onBlur={() => commit(amount, period)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            commit(amount, period, true);
+          }
+        }}
+      />
+      <select
+        aria-label="How often"
+        className="field !w-auto"
+        value={period}
+        onFocus={onFocus}
+        onChange={(e) => {
+          const p = e.target.value as Period | "";
+          setPeriod(p);
+          commit(amount, p);
+        }}
+      >
+        <option value="">How often…</option>
+        {PERIODS.map((p) => (
+          <option key={p} value={p}>
+            {PERIOD_LABEL[p].en}
+          </option>
+        ))}
+      </select>
+    </div>
   );
 }
