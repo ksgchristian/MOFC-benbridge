@@ -42,13 +42,6 @@ export function NavigatorPane() {
               </option>
             ))}
           </select>
-          <button
-            type="button"
-            onClick={() => confirm("Clear the conversation, form, and flags?") && dispatch({ type: "RESET" })}
-            className="btn btn-sm btn-gray"
-          >
-            {s.reset}
-          </button>
         </PaneHeader>
       }
       bottom={<Conversation viewer="navigator" />}

@@ -5,6 +5,7 @@ import { LANGUAGES } from "@/lib/languages";
 import { ui } from "@/lib/i18n/ui";
 import { useSession } from "@/lib/session/SessionContext";
 import type { Speaker } from "@/lib/session/types";
+import { consent } from "@/lib/glossary/consent";
 import { getSpeechProvider } from "@/lib/speech";
 import { Highlighted, HighlightLegend } from "./Highlighted";
 import { MicIcon, MicOffIcon, RedoIcon, SendIcon, StopIcon } from "./Icons";
@@ -20,7 +21,9 @@ type VoiceMode = "idle" | "recording" | "review";
  * then taps Translate. The typed box stays available as a fallback.
  */
 export function Composer({ speaker }: { speaker: Speaker }) {
-  const { langFor, sendMessage } = useSession();
+  const { langFor, sendMessage, state } = useSession();
+  // Chosen on the agreement screen. Off = no mic on either side; both people type.
+  const voiceOn = state.prefs.voice;
   const lang = langFor(speaker);
   const s = ui(lang);
   const speech = getSpeechProvider();
@@ -154,16 +157,18 @@ export function Composer({ speaker }: { speaker: Speaker }) {
           void submitTyped();
         }}
       >
-        <button
-          type="button"
-          onClick={startRecording}
-          disabled={!canListen}
-          title={micUnavailable ? (speech.id === "none" ? s.voiceOff : s.voiceUnsupported) : s.tapToSpeak}
-          aria-label={s.tapToSpeak}
-          className="btn btn-primary !h-11 !w-11 shrink-0 !p-0"
-        >
-          {micUnavailable ? <MicOffIcon size={20} /> : <MicIcon size={20} />}
-        </button>
+        {voiceOn && (
+          <button
+            type="button"
+            onClick={startRecording}
+            disabled={!canListen}
+            title={micUnavailable ? (speech.id === "none" ? s.voiceOff : s.voiceUnsupported) : s.tapToSpeak}
+            aria-label={s.tapToSpeak}
+            className="btn btn-primary !h-11 !w-11 shrink-0 !p-0"
+          >
+            {micUnavailable ? <MicOffIcon size={20} /> : <MicIcon size={20} />}
+          </button>
+        )}
         <div className="relative min-w-0 flex-1">
           <input
             value={typed}
@@ -183,8 +188,13 @@ export function Composer({ speaker }: { speaker: Speaker }) {
           </button>
         </div>
       </form>
-      {micUnavailable && <p className="px-1 text-[12px] text-[var(--fg-muted)]">{speech.id === "none" ? s.voiceOff : s.voiceUnsupported}</p>}
-      {!micUnavailable && mounted && <p className="px-1 text-[12px] text-[var(--fg-muted)]">{s.tapToSpeak}</p>}
+      {!voiceOn ? (
+        <p className="px-1 text-[12px] text-[var(--fg-muted)]">{consent.voiceOffNote[lang === "es" ? "es" : "en"]}</p>
+      ) : micUnavailable ? (
+        <p className="px-1 text-[12px] text-[var(--fg-muted)]">{speech.id === "none" ? s.voiceOff : s.voiceUnsupported}</p>
+      ) : (
+        mounted && <p className="px-1 text-[12px] text-[var(--fg-muted)]">{s.tapToSpeak}</p>
+      )}
       {notice && <p className="px-1 text-[13px] text-[var(--danger)]">{notice}</p>}
     </div>
   );

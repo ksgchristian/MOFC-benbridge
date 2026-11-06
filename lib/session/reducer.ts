@@ -18,6 +18,11 @@ export function canConfirm(fs: FieldState): boolean {
   return !!fs.pending && !fs.pending.unclear && fs.neighborAnswer === "yes" && fs.pending.value !== "";
 }
 
+/** Both the neighbor and the navigator have agreed on the agreement screen. */
+export function bothAgreed(state: SessionState): boolean {
+  return state.agreed.neighbor && state.agreed.navigator;
+}
+
 export function initialSession(formId: string): SessionState {
   return {
     neighborLang: DEFAULT_NEIGHBOR_LANG,
@@ -27,6 +32,9 @@ export function initialSession(formId: string): SessionState {
     flags: [],
     submitted: false,
     activeFieldId: null,
+    prefs: { voice: true, readAloud: true },
+    agreed: { neighbor: false, navigator: false },
+    started: false,
   };
 }
 
@@ -124,6 +132,20 @@ export function sessionReducer(state: SessionState, action: SessionAction): Sess
 
     case "REMOVE_FLAG":
       return { ...state, flags: state.flags.filter((f) => f.id !== action.id) };
+
+    // Agreement screen. Choices and agreements can only change before the session starts;
+    // ending the session (RESET) brings the agreement screen back with defaults.
+    case "SET_PREF":
+      if (state.started) return state;
+      return { ...state, prefs: { ...state.prefs, [action.pref]: action.value } };
+
+    case "SET_AGREEMENT":
+      if (state.started) return state;
+      return { ...state, agreed: { ...state.agreed, [action.who]: action.agreed } };
+
+    case "START_SESSION":
+      if (state.started || !bothAgreed(state)) return state;
+      return { ...state, started: true };
 
     case "SET_ACTIVE_FIELD":
       return state.activeFieldId === action.fieldId ? state : { ...state, activeFieldId: action.fieldId };

@@ -64,6 +64,19 @@ export interface SessionState {
   submitted: boolean;
   /** The question both sides are on right now (set by double-tapping a form row). */
   activeFieldId: string | null;
+  /** Choices made on the agreement screen. In memory only. */
+  prefs: SessionPrefs;
+  /** Each person's agreement on the agreement screen. */
+  agreed: Record<Speaker, boolean>;
+  /** True once both agreed and tapped Start. Until then only the agreement screen shows. */
+  started: boolean;
+}
+
+export interface SessionPrefs {
+  /** Speech-to-text (mic buttons). Off = both people type. */
+  voice: boolean;
+  /** Read-aloud buttons. */
+  readAloud: boolean;
 }
 
 export type SessionAction =
@@ -83,5 +96,9 @@ export type SessionAction =
   | { type: "ADD_FLAG"; flag: Flag }
   | { type: "REMOVE_FLAG"; id: string }
   | { type: "SET_ACTIVE_FIELD"; fieldId: string | null }
+  | { type: "SET_PREF"; pref: keyof SessionPrefs; value: boolean }
+  | { type: "SET_AGREEMENT"; who: Speaker; agreed: boolean }
+  /** Ignored unless both people have agreed. */
+  | { type: "START_SESSION" }
   | { type: "SUBMIT" }
   | { type: "RESET" };

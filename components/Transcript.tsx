@@ -51,7 +51,7 @@ export function Transcript({ viewer }: { viewer: Speaker }) {
 }
 
 function MessageRow({ message: m, viewer }: { message: Message; viewer: Speaker }) {
-  const { form, langFor, retryMessage, addFlag } = useSession();
+  const { form, state, langFor, retryMessage, addFlag } = useSession();
   const viewerLang = langFor(viewer);
   const s = ui(viewerLang);
   const mine = m.speaker === viewer;
@@ -115,7 +115,7 @@ function MessageRow({ message: m, viewer }: { message: Message; viewer: Speaker 
         )}
         {m.status === "done" && m.translated && (
           <>
-            {!mine && speech.canSpeak() && (
+            {!mine && state.prefs.readAloud && speech.canSpeak() && (
               <button
                 type="button"
                 title={s.listen}

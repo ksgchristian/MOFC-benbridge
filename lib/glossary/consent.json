@@ -1,0 +1,84 @@
+{
+  "_note": "Text for the privacy and agreement screen. Spanish is DRAFT wording for MOFC review (aim: 6th-grade reading level, short sentences). Set reviewed to true once a person at MOFC has approved an entry. Do not add privacy promises that the app does not keep.",
+
+  "title": {
+    "es": "Usted decide qué pasa con su información.",
+    "en": "You decide what happens with your information.",
+    "reviewed": false
+  },
+  "subtitle": {
+    "es": "Vamos a llenar la solicitud juntos. Usted verá cada pregunta y cada respuesta en español, al momento.",
+    "en": "We'll fill out the application together. You'll see every question and answer in Spanish, live.",
+    "reviewed": false
+  },
+
+  "choicesHeading": { "es": "Sus opciones", "en": "Your choices", "reviewed": false },
+  "voiceLabel": { "es": "Usar la voz", "en": "Use voice", "reviewed": false },
+  "voiceCaption": {
+    "es": "Para pasar lo que dice a texto, su voz se envía al servicio de voz del navegador (Google, si usa Chrome). Si lo apaga, los dos escriben.",
+    "en": "To turn speech into text, what you say is sent to the browser's speech service (Google, in Chrome). If off, both people type instead.",
+    "reviewed": false
+  },
+  "readAloudLabel": { "es": "Leer en voz alta", "en": "Read aloud", "reviewed": false },
+  "readAloudCaption": {
+    "es": "La computadora lee los mensajes en voz alta.",
+    "en": "The computer reads messages aloud.",
+    "reviewed": false
+  },
+
+  "alwaysHeading": { "es": "Esto pasa siempre", "en": "What always happens", "reviewed": false },
+  "always": [
+    {
+      "es": "Lo que dicen en la conversación se envía a Claude (de la empresa Anthropic) para traducirlo. Sus respuestas del formulario no se envían.",
+      "en": "The conversation lines are sent to Claude (by Anthropic) to translate. Your form answers are not.",
+      "reviewed": false
+    },
+    {
+      "es": "Nada se agrega a su solicitud sin su “Sí”.",
+      "en": "Nothing is added to your application without your “Sí”.",
+      "reviewed": false
+    },
+    {
+      "es": "No se envía nada a ninguna agencia. Este es un formulario de práctica.",
+      "en": "Nothing is sent to any agency. This is a practice form.",
+      "reviewed": false
+    },
+    {
+      "es": "Esta página no guarda nada. Al cerrarla o recargarla, todo se borra.",
+      "en": "This page doesn't save anything. Closing or reloading it erases everything.",
+      "reviewed": false
+    },
+    {
+      "es": "Puede parar cuando quiera.",
+      "en": "You can stop at any time.",
+      "reviewed": false
+    }
+  ],
+
+  "agreeHeading": { "es": "Acuerdo", "en": "Agreement", "reviewed": false },
+  "neighborName": { "es": "Usted", "en": "Neighbor", "reviewed": false },
+  "neighborAgree": { "es": "Acepto", "en": "I agree", "reviewed": false },
+  "neighborAgreed": { "es": "Aceptado", "en": "Agreed", "reviewed": false },
+  "navigatorName": { "es": "Navegador(a)", "en": "Navigator", "reviewed": false },
+  "navigatorAgree": { "es": "Acepto", "en": "I agree", "reviewed": false },
+  "navigatorAgreed": { "es": "Aceptado", "en": "Agreed", "reviewed": false },
+
+  "start": { "es": "Empezar", "en": "Start", "reviewed": false },
+  "startHint": {
+    "es": "Las dos personas deben aceptar para empezar.",
+    "en": "Both people must agree to start.",
+    "reviewed": false
+  },
+
+  "voiceOffNote": {
+    "es": "La voz está apagada. Escriba su mensaje.",
+    "en": "Voice is off. Type your message.",
+    "reviewed": false
+  },
+  "endSession": { "es": "Terminar sesión", "en": "End session", "reviewed": false },
+  "endSessionConfirm": {
+    "es": "¿Terminar la sesión? Se borra la conversación y el formulario.",
+    "en": "End the session? This erases the conversation and the form.",
+    "reviewed": false
+  }
+}
