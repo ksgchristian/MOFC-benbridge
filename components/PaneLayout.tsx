@@ -33,9 +33,9 @@ export function PaneLayout({
       <div ref={formScrollRef} className="relative lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
         <div className="space-y-6 px-5 pb-6 pt-5">{children}</div>
         {/* Soft fade so it's clear the application slides under the conversation. */}
-        <div className="pointer-events-none sticky bottom-0 z-[1] -mt-4 hidden h-4 bg-gradient-to-t from-[var(--bg)] to-transparent lg:block" aria-hidden />
+        <div className="pointer-events-none sticky bottom-0 z-[1] -mt-8 hidden h-8 bg-gradient-to-t from-[var(--bg)] to-transparent lg:block" aria-hidden />
       </div>
-      <div className="shrink-0 border-t border-[var(--separator)] px-5 pb-5 pt-3">{bottom}</div>
+      <div className="shrink-0 px-4 pb-4 pt-1">{bottom}</div>
     </section>
   );
 }

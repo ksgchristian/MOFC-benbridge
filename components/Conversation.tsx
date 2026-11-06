@@ -12,10 +12,14 @@ export function Conversation({ viewer, footnote }: { viewer: Speaker; footnote?:
   const s = ui(langFor(viewer));
   return (
     <div>
-      <h3 className="module-title">{s.conversation}</h3>
-      <div className="card overflow-hidden">
+      {/* A floating chat bubble: title, messages and the mic/typing controls in one rounded card. */}
+      <div className="bubble-card overflow-hidden">
+        <div className="flex items-center gap-2 px-5 pt-4">
+          <span className="h-2 w-2 rounded-full bg-[var(--accent)]" aria-hidden />
+          <h3 className="module-title !p-0">{s.conversation}</h3>
+        </div>
         <Transcript viewer={viewer} />
-        <div className="border-t border-[var(--separator)] p-3">
+        <div className="border-t border-[var(--separator)] px-4 py-3">
           <Composer speaker={viewer} />
         </div>
       </div>

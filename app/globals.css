@@ -27,6 +27,7 @@
   --mark-basis: #ecd5fb;
   --mark-fg: #1d1d1f;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 24px rgba(0, 0, 0, 0.05);
+  --shadow-float: 0 1px 3px rgba(0, 0, 0, 0.06), 0 12px 40px rgba(0, 0, 0, 0.12);
 
   /* Aliases kept for older class names. */
   --border: var(--separator);
@@ -56,6 +57,7 @@
     --mark-basis: #5b2a80;
     --mark-fg: #ffffff;
     --shadow: none;
+    --shadow-float: 0 12px 40px rgba(0, 0, 0, 0.6);
     color-scheme: dark;
   }
 }
@@ -91,6 +93,14 @@ body {
     border: 1px solid var(--separator);
     border-radius: 16px;
     box-shadow: var(--shadow);
+  }
+
+  /* The floating conversation bubble. */
+  .bubble-card {
+    background: var(--surface);
+    border: 1px solid var(--separator);
+    border-radius: 28px;
+    box-shadow: var(--shadow-float);
   }
 
   /* A box inside a module (pending value, transcript preview): same border, smaller radius. */

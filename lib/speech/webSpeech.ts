@@ -1,4 +1,11 @@
 import type { SpeechProvider } from "./types";
+import { FRIENDLY_SPEECH, pickVoice } from "./voices";
+
+// Chrome loads its voice list asynchronously; ask early so it is ready by the first Play.
+if (typeof window !== "undefined" && "speechSynthesis" in window) {
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.addEventListener?.("voiceschanged", () => window.speechSynthesis.getVoices());
+}
 
 /**
  * Browser Web Speech API.
@@ -69,10 +76,16 @@ export const webSpeech: SpeechProvider = {
 
   speak(text, locale) {
     if (!this.canSpeak()) return;
-    window.speechSynthesis.cancel();
+    const synth = window.speechSynthesis;
+    synth.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = locale;
-    window.speechSynthesis.speak(u);
+    // Use the most natural voice installed for this language, not the browser's default.
+    const voice = pickVoice(synth.getVoices(), locale);
+    if (voice) u.voice = voice;
+    u.lang = voice?.lang ?? locale;
+    u.rate = FRIENDLY_SPEECH.rate;
+    u.pitch = FRIENDLY_SPEECH.pitch;
+    synth.speak(u);
   },
 
   cancelSpeech() {
