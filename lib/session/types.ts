@@ -28,13 +28,20 @@ export interface PendingValue {
   ask: string;
   /** Arithmetic shown under the value, e.g. "3 adults + 2 children = 5" (done in code). */
   math?: string;
+  /** Guardrail 2: exact words this was drafted from. Absent for navigator-typed values. */
+  quote?: string;
 }
+
+/** Where a confirmed value came from, kept in the (in-memory) record. */
+export type ValueSource = { kind: "transcript"; quote: string } | { kind: "navigator" };
 
 export interface FieldState {
   /** Committed value. Only the navigator's Confirm writes here. */
   value: string;
   /** True once the navigator confirmed the value (after the neighbor said Yes). */
   confirmed: boolean;
+  /** Where the confirmed value came from: a quote from the conversation, or typed by the navigator. */
+  source?: ValueSource;
   pending?: PendingValue;
   /** The neighbor's answer about `pending`. Cleared whenever `pending` changes. */
   neighborAnswer?: "yes" | "no";

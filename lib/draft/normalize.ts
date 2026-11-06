@@ -18,6 +18,7 @@ export const ASK: Record<UnclearReason, string> = {
   household_math: "Ask them to count again: the people they listed don't add up to the total they said.",
   number: "Ask for the exact number.",
   date: "Ask for the full date (day, month and year).",
+  no_source: "Ask again: this answer couldn't be matched to the exact words that were said.",
 };
 
 /** Words that mean the amount is approximate. Checked in code, not by the model. */
@@ -27,7 +28,7 @@ const QUINCENA = /quincen|cada\s+quince\s+d[ií]as/iu;
 
 function unclear(fieldId: string, value: string, reason: UnclearReason | UnclearReason[], math?: string): FieldDraft {
   const reasons = Array.isArray(reason) ? reason : [reason];
-  return { fieldId, value, unclear: true, ask: reasons.map((r) => ASK[r]).join(" "), reason: reasons[0], ...(math ? { math } : {}) };
+  return { fieldId, value, unclear: true, ask: reasons.map((r) => ASK[r]).join(" "), reason: reasons[0], quote: "", ...(math ? { math } : {}) };
 }
 
 type MoneyField = Extract<FormField, { type: "money" }>;
@@ -55,7 +56,7 @@ function normalizeMoney(field: MoneyField, d: ModelDraft, form: FormSchema, evid
   if (field.basis && (d.income_type == null || d.income_type === "UNCLEAR")) reasons.push("income_type");
   if (APPROX.test(evidence)) reasons.push("approximate");
   if (reasons.length) return unclear(field.id, quincena ? encodeMoney(d.income_amount, null) : value, reasons);
-  return { fieldId: field.id, value, unclear: false, ask: "" };
+  return { fieldId: field.id, value, unclear: false, ask: "", quote: "" };
 }
 
 function normalizeHousehold(field: FormField, d: ModelDraft): FieldDraft {
@@ -65,10 +66,10 @@ function normalizeHousehold(field: FormField, d: ModelDraft): FieldDraft {
     const sum = parts.reduce((n, p) => n + p.count, 0);
     const math = `${parts.map((p) => `${p.count} ${p.label}`).join(" + ")} = ${sum}`;
     if (typeof d.household_size === "number" && d.household_size !== sum) return unclear(field.id, "", "household_math", math);
-    return { fieldId: field.id, value: String(sum), unclear: false, ask: "", math };
+    return { fieldId: field.id, value: String(sum), unclear: false, ask: "", quote: "", math };
   }
   if (typeof d.household_size === "number" && d.household_size > 0) {
-    return { fieldId: field.id, value: String(d.household_size), unclear: false, ask: "" };
+    return { fieldId: field.id, value: String(d.household_size), unclear: false, ask: "", quote: "" };
   }
   return unclear(field.id, "", "household");
 }
@@ -83,16 +84,44 @@ function normalizeOne(d: ModelDraft, form: FormSchema, evidence: string): FieldD
       return normalizeMoney(field, d, form, evidence);
     case "number":
       if (field.allowParts) return normalizeHousehold(field, d);
-      return /^\d+$/.test(raw) ? { fieldId: field.id, value: raw, unclear: false, ask: "" } : unclear(field.id, "", "number");
+      return /^\d+$/.test(raw) ? { fieldId: field.id, value: raw, unclear: false, ask: "", quote: "" } : unclear(field.id, "", "number");
     case "yesno":
-      return raw === "yes" || raw === "no" ? { fieldId: field.id, value: raw, unclear: false, ask: "" } : null;
+      return raw === "yes" || raw === "no" ? { fieldId: field.id, value: raw, unclear: false, ask: "", quote: "" } : null;
     case "select":
-      return field.options.some((o) => o.value === raw) ? { fieldId: field.id, value: raw, unclear: false, ask: "" } : null;
+      return field.options.some((o) => o.value === raw) ? { fieldId: field.id, value: raw, unclear: false, ask: "", quote: "" } : null;
     case "date":
-      return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? { fieldId: field.id, value: raw, unclear: false, ask: "" } : unclear(field.id, "", "date");
+      return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? { fieldId: field.id, value: raw, unclear: false, ask: "", quote: "" } : unclear(field.id, "", "date");
     default:
-      return raw ? { fieldId: field.id, value: raw, unclear: false, ask: "" } : null;
+      return raw ? { fieldId: field.id, value: raw, unclear: false, ask: "", quote: "" } : null;
   }
+}
+
+/** Case- and spacing-insensitive form used to check that a quote really is in the line. */
+export function normalizeForMatch(s: string): string {
+  return s.normalize("NFC").toLowerCase().replace(/[“”«»"]/g, '"').replace(/\s+/g, " ").trim();
+}
+
+/** Guardrail 2: is `span` an actual piece of `line`? (ignoring case and spacing only) */
+export function spanInLine(span: string, line: string): boolean {
+  const s = normalizeForMatch(span);
+  return s.length > 0 && normalizeForMatch(line).includes(s);
+}
+
+/**
+ * Guardrail 2: every draft must point at the exact words it came from. If it
+ * doesn't, or those words aren't really in the line, the draft is UNCLEAR and
+ * no value is shown. Text answers (names, addresses) must also appear verbatim
+ * in the quote, so they can't be translated or "fixed".
+ */
+function withProvenance(n: FieldDraft, d: ModelDraft, form: FormSchema, line: string): FieldDraft {
+  const field = allFields(form).find((f) => f.id === n.fieldId);
+  const span = d.source_span.trim();
+  if (!spanInLine(span, line)) return { ...unclear(n.fieldId, "", "no_source"), quote: "" };
+  const textField = field && (field.type === "text" || field.type === "phone");
+  if (textField && !normalizeForMatch(span).includes(normalizeForMatch(n.value))) {
+    return { ...unclear(n.fieldId, "", "no_source"), quote: span };
+  }
+  return { ...n, quote: span };
 }
 
 /**
@@ -104,7 +133,7 @@ export function normalizeDrafts(drafts: ModelDraft[], form: FormSchema, line: st
   const byField = new Map<string, FieldDraft>();
   for (const d of drafts) {
     const n = normalizeOne(d, form, line);
-    if (n) byField.set(n.fieldId, n);
+    if (n) byField.set(n.fieldId, withProvenance(n, d, form, line));
   }
   return [...byField.values()];
 }

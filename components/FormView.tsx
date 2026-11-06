@@ -131,6 +131,26 @@ function ConfirmedValue({ field, fs, lang, labels, s }: { field: FormField; fs: 
   return (
     <p className="flex items-center gap-1.5 text-[13px] text-[var(--accent)]">
       <CheckIcon size={14} /> {s.confirmed}: <span className="font-semibold">{displayValue(field, fs.value, lang, labels.t)}</span>
+      <span className="font-normal text-[var(--fg-muted)]">
+        {fs.source?.kind === "transcript" ? `← “${fs.source.quote}”` : `· ${s.enteredByNavigator}`}
+      </span>
+    </p>
+  );
+}
+
+/**
+ * Guardrail 2: where a value came from, shown right under it. A quote from the
+ * conversation, or "Entered by navigator" for typed values, so a typed value
+ * never looks like a verified one.
+ */
+function Provenance({ origin, quote, s }: { origin: "claude" | "navigator" | "transcript"; quote?: string; s: UiStrings }) {
+  if (origin === "navigator") {
+    return <p className="text-[13px] font-medium text-[var(--fg-muted)]">✎ {s.enteredByNavigator}</p>;
+  }
+  if (!quote) return null;
+  return (
+    <p className="text-[13px] italic leading-snug text-[var(--fg-muted)]">
+      ← “{quote}”
     </p>
   );
 }
@@ -164,6 +184,7 @@ function NavigatorField({ field, fs, inputId, s, labels }: { field: FormField; f
             <span className="text-[17px] font-semibold">{shown ? <Highlighted text={shown} lang="en" /> : "—"}</span>
           </div>
           {p.math && <p className="text-[13px] text-[var(--fg-muted)]">{p.math}</p>}
+          <Provenance origin={p.origin} quote={p.quote} s={s} />
           {p.unclear ? (
             <p className="flex items-start gap-1.5 text-[13px] font-medium text-[var(--warn)]">
               <AlertIcon size={14} className="mt-0.5 shrink-0" /> {s.unclearAsk} {p.ask}
@@ -239,6 +260,7 @@ function NeighborField({
   return (
     <div id={inputId} className="inset-box space-y-3 bg-[var(--fill)]">
       <p className="text-[20px] font-semibold leading-snug">{shown ? <Highlighted text={shown} lang={lang} /> : "—"}</p>
+      <Provenance origin={p.origin} quote={p.quote} s={s} />
       {p.unclear ? (
         <p className="text-[13px] text-[var(--fg-muted)]">{s.navigatorWillAsk}</p>
       ) : (

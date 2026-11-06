@@ -22,7 +22,7 @@ describe("draft → neighbor Yes/No → navigator Confirm", () => {
 
     s = sessionReducer(s, { type: "NEIGHBOR_ANSWER", fieldId: "householdSize", answer: "yes" });
     s = sessionReducer(s, { type: "NAVIGATOR_CONFIRM", fieldId: "householdSize" });
-    expect(s.fields.householdSize).toEqual({ value: "3", confirmed: true });
+    expect(s.fields.householdSize).toMatchObject({ value: "3", confirmed: true });
   });
 
   it("unclear drafts can't be answered or confirmed", () => {
@@ -48,7 +48,7 @@ describe("draft → neighbor Yes/No → navigator Confirm", () => {
     s = sessionReducer(s, { type: "RESOLVE_UNCLEAR", fieldId: "grossIncome" });
     s = sessionReducer(s, { type: "NEIGHBOR_ANSWER", fieldId: "grossIncome", answer: "yes" });
     s = sessionReducer(s, { type: "NAVIGATOR_CONFIRM", fieldId: "grossIncome" });
-    expect(s.fields.grossIncome).toEqual({ value: "2000", confirmed: true });
+    expect(s.fields.grossIncome).toMatchObject({ value: "2000", confirmed: true });
   });
 
   it("after a No, the navigator can ask again (button or re-entering the same value)", () => {
@@ -73,7 +73,7 @@ describe("draft → neighbor Yes/No → navigator Confirm", () => {
     s = sessionReducer(s, propose("householdSize", "4", { origin: "navigator" }));
     s = sessionReducer(s, { type: "NEIGHBOR_ANSWER", fieldId: "householdSize", answer: "yes" });
     s = sessionReducer(s, { type: "NAVIGATOR_CONFIRM", fieldId: "householdSize" });
-    expect(s.fields.householdSize).toEqual({ value: "4", confirmed: true });
+    expect(s.fields.householdSize).toMatchObject({ value: "4", confirmed: true });
   });
 
   it("discard drops the pending value", () => {
@@ -86,6 +86,20 @@ describe("draft → neighbor Yes/No → navigator Confirm", () => {
     let s = sessionReducer(start(), { type: "SUBMIT" });
     s = sessionReducer(s, propose("fullName", "X"));
     expect(s.fields.fullName).toBeUndefined();
+  });
+});
+
+describe("guardrail 2: the record keeps where a value came from", () => {
+  const confirmWith = (pending: Parameters<typeof propose>[2] & { quote?: string }) => {
+    let s = sessionReducer(start(), { type: "PROPOSE_VALUE", fieldId: "householdSize", pending: { value: "3", origin: "claude", unclear: false, ask: "", ...pending } });
+    s = sessionReducer(s, { type: "NEIGHBOR_ANSWER", fieldId: "householdSize", answer: "yes" });
+    return sessionReducer(s, { type: "NAVIGATOR_CONFIRM", fieldId: "householdSize" }).fields.householdSize;
+  };
+  it("a drafted value keeps its quote", () => {
+    expect(confirmWith({ quote: "somos tres" })).toEqual({ value: "3", confirmed: true, source: { kind: "transcript", quote: "somos tres" } });
+  });
+  it("a typed value is marked as entered by the navigator", () => {
+    expect(confirmWith({ origin: "navigator" })).toEqual({ value: "3", confirmed: true, source: { kind: "navigator" } });
   });
 });
 

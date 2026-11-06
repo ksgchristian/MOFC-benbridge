@@ -61,7 +61,8 @@ export type UnclearReason =
   | "household"
   | "household_math"
   | "number"
-  | "date";
+  | "date"
+  | "no_source";
 
 /** A draft after the code checks, ready to propose into the form. */
 export interface FieldDraft {
@@ -74,6 +75,8 @@ export interface FieldDraft {
   reason?: UnclearReason;
   /** Arithmetic shown to people, e.g. "3 adults + 2 children = 5". Done in code. */
   math?: string;
+  /** Guardrail 2: the exact words from the transcript this came from (verified in code). "" if none. */
+  quote: string;
 }
 
 /** Runtime check of the /api/draft response shape (evals fail loudly if this changes). */
@@ -84,4 +87,5 @@ export const FieldDraftShape = z.object({
   ask: z.string(),
   reason: z.string().optional(),
   math: z.string().optional(),
+  quote: z.string(),
 });

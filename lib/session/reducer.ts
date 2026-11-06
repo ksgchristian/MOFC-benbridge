@@ -98,13 +98,16 @@ export function sessionReducer(state: SessionState, action: SessionAction): Sess
       if (state.submitted) return state;
       const prev = state.fields[action.fieldId];
       if (!prev || !canConfirm(prev)) return state;
-      return withField(state, action.fieldId, { value: prev.pending!.value, confirmed: true });
+      const p = prev.pending!;
+      // Keep where the value came from in the record: a typed value never looks like a verified one.
+      const source = p.origin === "claude" && p.quote ? { kind: "transcript" as const, quote: p.quote } : { kind: "navigator" as const };
+      return withField(state, action.fieldId, { value: p.value, confirmed: true, source });
     }
 
     case "DISCARD_PENDING": {
       const prev = state.fields[action.fieldId];
       if (!prev?.pending || state.submitted) return state;
-      return withField(state, action.fieldId, { value: prev.value, confirmed: prev.confirmed });
+      return withField(state, action.fieldId, { value: prev.value, confirmed: prev.confirmed, ...(prev.source ? { source: prev.source } : {}) });
     }
 
     case "RESOLVE_UNCLEAR": {
