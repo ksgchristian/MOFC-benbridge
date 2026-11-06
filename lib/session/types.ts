@@ -15,6 +15,8 @@ export interface Message {
   glossaryHits?: GlossaryHit[];
   /** Form fields Claude drafted from this line. */
   draftedFields?: string[];
+  /** The line mentions a number but nothing could be drafted from it: the navigator must ask again. */
+  valueUnread?: boolean;
 }
 
 /** A value waiting for the neighbor's Yes/No and the navigator's Confirm. */
@@ -101,6 +103,7 @@ export type SessionAction =
   | { type: "NAVIGATOR_CONFIRM"; fieldId: string }
   | { type: "DISCARD_PENDING"; fieldId: string }
   | { type: "SET_MESSAGE_DRAFTS"; id: string; fieldIds: string[] }
+  | { type: "SET_MESSAGE_UNREAD"; id: string }
   | { type: "ADD_FLAG"; flag: Flag }
   | { type: "REMOVE_FLAG"; id: string }
   | { type: "SET_ACTIVE_FIELD"; fieldId: string | null }

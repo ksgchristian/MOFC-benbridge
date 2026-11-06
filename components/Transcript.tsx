@@ -10,7 +10,7 @@ import { usePauseScrollSync, useSyncedScroll } from "@/lib/scrollSync";
 import { getSpeechProvider } from "@/lib/speech";
 import { FlagButton } from "./FlagButton";
 import { Highlighted } from "./Highlighted";
-import { SparkleIcon, SpeakerIcon } from "./Icons";
+import { AlertIcon, SparkleIcon, SpeakerIcon } from "./Icons";
 
 /**
  * Conversation as seen by `viewer`. Their own lines (right, green) show what
@@ -96,6 +96,12 @@ function MessageRow({ message: m, viewer }: { message: Message; viewer: Speaker 
       )}
 
       <div className="flex items-center gap-1 px-1">
+        {viewer === "navigator" && m.valueUnread && (
+          <span className="chip bg-[var(--warn-soft)] text-[var(--warn)]" role="status">
+            <AlertIcon size={12} />
+            {s.valueUnread}
+          </span>
+        )}
         {viewer === "navigator" && m.draftedFields && m.draftedFields.length > 0 && (
           <span className="chip bg-[var(--accent-soft)] text-[var(--accent)]">
             <SparkleIcon size={12} />

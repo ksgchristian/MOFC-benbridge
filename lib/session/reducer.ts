@@ -128,6 +128,12 @@ export function sessionReducer(state: SessionState, action: SessionAction): Sess
         messages: state.messages.map((m) => (m.id === action.id ? { ...m, draftedFields: action.fieldIds } : m)),
       };
 
+    case "SET_MESSAGE_UNREAD":
+      return {
+        ...state,
+        messages: state.messages.map((m) => (m.id === action.id ? { ...m, valueUnread: true } : m)),
+      };
+
     case "ADD_FLAG":
       return { ...state, flags: [...state.flags, action.flag] };
 

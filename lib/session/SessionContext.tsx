@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useReducer,
 import { NAVIGATOR_LANG, type LangCode } from "@/lib/languages";
 import { translate } from "@/lib/translate/client";
 import { requestDrafts } from "@/lib/draft/client";
+import { valueUnread } from "@/lib/draft/unread";
 import type { FormSchema } from "@/lib/forms/schema";
 import { initialSession, sessionReducer } from "./reducer";
 import type { Flag, FlagTarget, SessionAction, SessionState, Speaker } from "./types";
@@ -38,7 +39,10 @@ export function SessionProvider({ form, children }: { form: FormSchema; children
     messagesRef.current = state.messages;
   }, [state.messages]);
 
-  /** Ask Claude to draft form values from this line. Failures are silent: the message still stands. */
+  /**
+   * Ask Claude to draft form values from this line. Never silent: if the line mentions a
+   * number and nothing was drafted (or drafting failed), the navigator is told to ask again.
+   */
   const runDrafting = useCallback(
     async (id: string, speaker: Speaker, text: string, lang: LangCode) => {
       const context = messagesRef.current
@@ -55,8 +59,10 @@ export function SessionProvider({ form, children }: { form: FormSchema; children
           });
         }
         if (drafts.length) dispatch({ type: "SET_MESSAGE_DRAFTS", id, fieldIds: drafts.map((d) => d.fieldId) });
+        if (valueUnread(text, drafts.length)) dispatch({ type: "SET_MESSAGE_UNREAD", id });
       } catch {
-        // Drafting is a helper; the navigator can still type the value.
+        // Drafting is a helper; the navigator can still type the value. A number that was said still gets flagged.
+        if (valueUnread(text, 0)) dispatch({ type: "SET_MESSAGE_UNREAD", id });
       }
     },
     [form.id],
