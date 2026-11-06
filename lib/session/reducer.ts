@@ -53,8 +53,6 @@ export function sessionReducer(state: SessionState, action: SessionAction): Sess
                 ...m,
                 status: "done",
                 translated: action.translated,
-                uncertain: action.uncertain,
-                uncertaintyNote: action.uncertaintyNote,
                 glossaryHits: action.glossaryHits,
               }
             : m,

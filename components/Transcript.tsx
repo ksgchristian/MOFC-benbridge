@@ -10,7 +10,7 @@ import { usePauseScrollSync, useSyncedScroll } from "@/lib/scrollSync";
 import { getSpeechProvider } from "@/lib/speech";
 import { FlagButton } from "./FlagButton";
 import { Highlighted } from "./Highlighted";
-import { AlertIcon, SparkleIcon, SpeakerIcon } from "./Icons";
+import { SparkleIcon, SpeakerIcon } from "./Icons";
 
 /**
  * Conversation as seen by `viewer`. Their own lines (right, green) show what
@@ -68,7 +68,7 @@ function MessageRow({ message: m, viewer }: { message: Message; viewer: Speaker 
       <div
         className={`max-w-[85%] rounded-[20px] px-4 py-2.5 text-[15px] leading-snug ${
           mine ? "rounded-br-md bg-[var(--accent)] text-[var(--on-accent)]" : "rounded-bl-md bg-[var(--bubble-them)] text-[var(--fg)]"
-        } ${m.uncertain ? "ring-2 ring-[var(--warn)] ring-offset-2 ring-offset-[var(--surface)]" : ""}`}
+        }`}
       >
         {primary ? (
           <p lang={primaryLang}>
@@ -92,17 +92,6 @@ function MessageRow({ message: m, viewer }: { message: Message; viewer: Speaker 
           <button className="btn-plain btn btn-sm !h-6 !px-2" onClick={() => void retryMessage(m.id)}>
             {s.retry}
           </button>
-        </p>
-      )}
-
-      {m.uncertain && (
-        <p className="flex max-w-[85%] items-start gap-1.5 px-2 text-[13px] text-[var(--warn)]">
-          <AlertIcon size={14} className="mt-0.5 shrink-0" />
-          <span>
-            {s.uncertain}
-            {/* The note is written in English for the navigator. */}
-            {viewer === "navigator" && m.uncertaintyNote ? `: ${m.uncertaintyNote}` : ""}
-          </span>
         </p>
       )}
 

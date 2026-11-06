@@ -1,7 +1,7 @@
 "use client";
 
 import type { LangCode } from "@/lib/languages";
-import type { ApiError, TranslateContext, TranslateResponse } from "./schema";
+import type { ApiError, ClientTranslateResponse, TranslateContext } from "./schema";
 
 export class ClientTranslateError extends Error {
   constructor(public readonly code: ApiError["error"] | "network", message: string) {
@@ -29,7 +29,7 @@ export async function postJson<T>(url: string, body: unknown): Promise<T> {
 }
 
 export function translate(text: string, from: LangCode, to: LangCode, context: TranslateContext = "conversation") {
-  return postJson<TranslateResponse>("/api/translate", { text, from, to, context });
+  return postJson<ClientTranslateResponse>("/api/translate", { text, from, to, context });
 }
 
 export function translateFormItems(formId: string, to: LangCode, items: Record<string, string>) {

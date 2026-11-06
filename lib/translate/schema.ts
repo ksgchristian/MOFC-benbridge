@@ -37,12 +37,20 @@ export const ModelFormTranslation = z.object({
   items: z.array(z.object({ key: z.string(), translation: z.string() })),
 });
 
+/** Server-side result. `uncertain` is the model's own judgment: logged and used by evals, never shown. */
 export interface TranslateResponse {
   translation: string;
   uncertain: boolean;
   uncertaintyNote: string;
   glossaryHits: { en: string; translation: string; note?: string }[];
 }
+
+/**
+ * What the browser gets. The model's self-reported uncertainty is left out on
+ * purpose: a warning that doesn't block teaches people to ignore warnings, and
+ * its absence would read as "this is fine".
+ */
+export type ClientTranslateResponse = Omit<TranslateResponse, "uncertain" | "uncertaintyNote">;
 
 export interface ApiError {
   error: "bad_request" | "not_configured" | "rate_limited" | "refused" | "upstream_error";

@@ -18,8 +18,11 @@ export async function POST(request: Request) {
 
   const { text, from, to, context } = parsed.data;
   try {
-    const result = await translateText(text, from as LangCode, to as LangCode, context);
-    return Response.json(result);
+    const { uncertain, uncertaintyNote: _note, ...clientResult } = await translateText(text, from as LangCode, to as LangCode, context);
+    void _note;
+    // Keep the model's self-reported uncertainty as a server-side signal for evals. Flag only, never text.
+    console.info(`[translate] ${from}->${to} uncertain=${uncertain}`);
+    return Response.json(clientResult);
   } catch (err) {
     if (err instanceof TranslateError) {
       return Response.json({ error: err.code, message: err.message } satisfies ApiError, { status: err.status });

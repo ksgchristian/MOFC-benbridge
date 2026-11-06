@@ -70,8 +70,6 @@ export function SessionProvider({ form, children }: { form: FormSchema; children
           type: "RESOLVE_MESSAGE",
           id,
           translated: { lang: to, text: res.translation },
-          uncertain: res.uncertain,
-          uncertaintyNote: res.uncertaintyNote,
           glossaryHits: res.glossaryHits,
         });
       } catch (err) {

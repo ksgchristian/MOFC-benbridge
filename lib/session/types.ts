@@ -12,8 +12,6 @@ export interface Message {
   translated?: { lang: LangCode; text: string };
   status: "pending" | "done" | "error";
   error?: string;
-  uncertain?: boolean;
-  uncertaintyNote?: string;
   glossaryHits?: GlossaryHit[];
   /** Form fields Claude drafted from this line. */
   draftedFields?: string[];
@@ -81,7 +79,7 @@ export interface SessionPrefs {
 
 export type SessionAction =
   | { type: "ADD_MESSAGE"; message: Message }
-  | { type: "RESOLVE_MESSAGE"; id: string; translated: { lang: LangCode; text: string }; uncertain: boolean; uncertaintyNote: string; glossaryHits: GlossaryHit[] }
+  | { type: "RESOLVE_MESSAGE"; id: string; translated: { lang: LangCode; text: string }; glossaryHits: GlossaryHit[] }
   | { type: "FAIL_MESSAGE"; id: string; error: string }
   | { type: "PROPOSE_VALUE"; fieldId: string; pending: PendingValue }
   | { type: "LOAD_VALUES"; values: Record<string, string> }
