@@ -10,7 +10,6 @@ import { usePauseScrollSync } from "@/lib/scrollSync";
 import { canConfirm } from "@/lib/session/reducer";
 import { useSession } from "@/lib/session/SessionContext";
 import type { FieldState, Speaker } from "@/lib/session/types";
-import { FlagButton } from "./FlagButton";
 import { Highlighted } from "./Highlighted";
 import { AlertIcon, CheckIcon, SparkleIcon } from "./Icons";
 
@@ -59,7 +58,7 @@ type Labels = ReturnType<typeof useFormLabels>;
 const INTERACTIVE = "input, select, textarea, button, a, label";
 
 function FieldRow({ field, viewer, labels }: { field: FormField; viewer: Speaker; labels: Labels }) {
-  const { state, langFor, addFlag, dispatch } = useSession();
+  const { state, langFor, dispatch } = useSession();
   const lang = langFor(viewer);
   const s = ui(lang);
   const fs: FieldState = state.fields[field.id] ?? { value: "", confirmed: false };
@@ -113,9 +112,6 @@ function FieldRow({ field, viewer, labels }: { field: FormField; viewer: Speaker
           </label>
           {help && <p className="text-[13px] leading-snug text-[var(--fg-muted)]">{help}</p>}
         </div>
-        {viewer === "neighbor" && lang !== "en" && (
-          <FlagButton strings={s} onFlag={(note) => addFlag(viewer, { kind: "field", fieldId: field.id }, field.label.en, label, note)} />
-        )}
       </div>
 
       <div className="select-text">
