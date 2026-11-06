@@ -121,7 +121,7 @@ export function Composer({ speaker }: { speaker: Speaker }) {
           className="field resize-none"
         />
         {transcript.trim() && (
-          <div className="space-y-2 rounded-xl bg-[var(--fill)] px-3 py-2.5">
+          <div className="inset-box space-y-2 bg-[var(--fill)]">
             <p lang={lang} className="text-[15px] leading-relaxed">
               <Highlighted text={transcript} lang={lang} />
             </p>

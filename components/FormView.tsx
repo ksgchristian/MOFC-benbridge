@@ -158,7 +158,7 @@ function NavigatorField({ field, fs, inputId, s, labels }: { field: FormField; f
       <ConfirmedValue field={field} fs={fs} lang="en" labels={labels} s={s} />
 
       {p && (
-        <div className={`space-y-2.5 rounded-xl p-3 ${p.unclear ? "bg-[var(--warn-soft)]" : "bg-[var(--fill)]"}`}>
+        <div className={`inset-box space-y-2.5 ${p.unclear ? "bg-[var(--warn-soft)]" : "bg-[var(--fill)]"}`}>
           <div className="flex flex-wrap items-center gap-2">
             <span className="chip bg-[var(--surface)] text-[var(--fg-muted)]">
               {p.origin === "claude" && <SparkleIcon size={12} />}
@@ -228,7 +228,7 @@ function NeighborField({
 
   const shown = displayValue(field, p.value, lang, labels.t);
   return (
-    <div id={inputId} className="space-y-3 rounded-xl bg-[var(--fill)] p-3">
+    <div id={inputId} className="inset-box space-y-3 bg-[var(--fill)]">
       <p className="text-[20px] font-semibold leading-snug">{shown ? <Highlighted text={shown} lang={lang} /> : "—"}</p>
       {p.unclear ? (
         <p className="text-[13px] text-[var(--fg-muted)]">{s.navigatorWillAsk}</p>
