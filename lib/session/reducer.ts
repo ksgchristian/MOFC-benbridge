@@ -100,7 +100,10 @@ export function sessionReducer(state: SessionState, action: SessionAction): Sess
       if (!prev || !canConfirm(prev)) return state;
       const p = prev.pending!;
       // Keep where the value came from in the record: a typed value never looks like a verified one.
-      const source = p.origin === "claude" && p.quote ? { kind: "transcript" as const, quote: p.quote } : { kind: "navigator" as const };
+      const source =
+        p.origin === "claude" && p.quote
+          ? { kind: "transcript" as const, quote: p.quote, ...(p.math ? { math: p.math } : {}) }
+          : { kind: "navigator" as const };
       return withField(state, action.fieldId, { value: p.value, confirmed: true, source });
     }
 

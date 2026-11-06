@@ -62,7 +62,8 @@ export type UnclearReason =
   | "household_math"
   | "number"
   | "date"
-  | "no_source";
+  | "no_source"
+  | "number_unverified";
 
 /** A draft after the code checks, ready to propose into the form. */
 export interface FieldDraft {

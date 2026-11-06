@@ -33,7 +33,7 @@ export interface PendingValue {
 }
 
 /** Where a confirmed value came from, kept in the (in-memory) record. */
-export type ValueSource = { kind: "transcript"; quote: string } | { kind: "navigator" };
+export type ValueSource = { kind: "transcript"; quote: string; math?: string } | { kind: "navigator" };
 
 export interface FieldState {
   /** Committed value. Only the navigator's Confirm writes here. */

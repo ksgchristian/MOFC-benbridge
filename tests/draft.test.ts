@@ -125,7 +125,7 @@ describe("guardrail 1: other fields", () => {
   });
 
   it("last draft for a field wins", () => {
-    expect(norm([d("householdSize", { household_size: 3 }), d("householdSize", { household_size: 4 })], form, "x")[0].value).toBe("4");
+    expect(norm([d("householdSize", { household_size: 3 }), d("householdSize", { household_size: 4 })], form, "somos tres, no, somos cuatro")[0].value).toBe("4");
   });
 });
 
@@ -153,5 +153,32 @@ describe("guardrail 2: provenance", () => {
     expect(ok).toMatchObject({ value: "Jose Muestra", unclear: false });
     const fixed = normalizeDrafts([{ ...d("fullName", { value: "José Muestra" }), source_span: "Jose Muestra" }], form, l)[0];
     expect(fixed).toMatchObject({ value: "", unclear: true, reason: "no_source" });
+  });
+});
+
+describe("guardrail 3: numbers must appear in the quote", () => {
+  it("hides an amount the speaker didn't say", () => {
+    const line = "gano dos mil cien al mes antes de impuestos";
+    const out = normalizeDrafts([{ ...income("grossIncome", 2000, "monthly", "gross"), source_span: line }], form, line)[0];
+    expect(out).toMatchObject({ value: "", unclear: true, reason: "number_unverified", quote: line });
+  });
+
+  it("accepts the amount as digits or words", () => {
+    for (const line of ["Gano 2,100 al mes antes de impuestos", "gano dos mil cien al mes antes de impuestos"]) {
+      expect(normalizeDrafts([{ ...income("grossIncome", 2100, "monthly", "gross"), source_span: line }], form, line)[0]).toMatchObject({ value: "2100/monthly", unclear: false });
+    }
+  });
+
+  it("household: every part must be said (except 'one', as in 'yo'), and the total is the code's sum", () => {
+    const parts = (line: string, ps: { count: number; label: string }[]) =>
+      normalizeDrafts([{ ...d("householdSize", { household_size: null, household_parts: ps }), source_span: line }], form, line)[0];
+    expect(parts("tres adultos y dos niños", [{ count: 3, label: "adults" }, { count: 2, label: "children" }])).toMatchObject({ value: "5", unclear: false });
+    expect(parts("yo y mis dos hijos", [{ count: 1, label: "adult" }, { count: 2, label: "children" }])).toMatchObject({ value: "3", unclear: false });
+    expect(parts("tres adultos y dos niños", [{ count: 3, label: "adults" }, { count: 3, label: "children" }])).toMatchObject({ value: "", reason: "number_unverified" });
+  });
+
+  it("a plain household total must be said", () => {
+    const line = "somos tres";
+    expect(normalizeDrafts([{ ...d("householdSize", { household_size: 4 }), source_span: line }], form, line)[0]).toMatchObject({ value: "", reason: "number_unverified" });
   });
 });

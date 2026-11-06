@@ -1,5 +1,6 @@
 import { encodeMoney, type Period } from "@/lib/forms/money";
 import { allFields, type FormField, type FormSchema } from "@/lib/forms/schema";
+import { numbersCheckOut } from "@/lib/verify/fieldNumbers";
 import type { FieldDraft, ModelDraft, UnclearReason } from "./schema";
 
 /**
@@ -19,6 +20,7 @@ export const ASK: Record<UnclearReason, string> = {
   number: "Ask for the exact number.",
   date: "Ask for the full date (day, month and year).",
   no_source: "Ask again: this answer couldn't be matched to the exact words that were said.",
+  number_unverified: "Ask again: the number couldn't be found in what was said. Don't enter it until you hear it again.",
 };
 
 /** Words that mean the amount is approximate. Checked in code, not by the model. */
@@ -120,6 +122,10 @@ function withProvenance(n: FieldDraft, d: ModelDraft, form: FormSchema, line: st
   const textField = field && (field.type === "text" || field.type === "phone");
   if (textField && !normalizeForMatch(span).includes(normalizeForMatch(n.value))) {
     return { ...unclear(n.fieldId, "", "no_source"), quote: span };
+  }
+  // Guardrail 3: every number shown must appear in the quote (code check, no model).
+  if (field && !numbersCheckOut(field, n.value, span, n.math)) {
+    return { ...unclear(n.fieldId, "", "number_unverified"), quote: span };
   }
   return { ...n, quote: span };
 }

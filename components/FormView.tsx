@@ -8,9 +8,11 @@ import { YES_NO_LABELS, type FormField } from "@/lib/forms/schema";
 import { useFormLabels } from "@/lib/forms/useFormLabels";
 import type { LangCode } from "@/lib/languages";
 import { usePauseScrollSync } from "@/lib/scrollSync";
+import { ASK } from "@/lib/draft/normalize";
 import { canConfirm } from "@/lib/session/reducer";
+import { numbersCheckOut } from "@/lib/verify/fieldNumbers";
 import { useSession } from "@/lib/session/SessionContext";
-import type { FieldState, Speaker } from "@/lib/session/types";
+import type { FieldState, PendingValue, Speaker } from "@/lib/session/types";
 import { Highlighted } from "./Highlighted";
 import { AlertIcon, CheckIcon, SparkleIcon } from "./Icons";
 
@@ -128,6 +130,9 @@ function FieldRow({ field, viewer, labels }: { field: FormField; viewer: Speaker
 
 function ConfirmedValue({ field, fs, lang, labels, s }: { field: FormField; fs: FieldState; lang: LangCode; labels: Labels; s: UiStrings }) {
   if (!fs.confirmed || !fs.value) return null;
+  if (!confirmedNumbersOk(field, fs)) {
+    return <p className="text-[13px] font-medium text-[var(--danger)]">{ASK.number_unverified}</p>;
+  }
   return (
     <p className="flex items-center gap-1.5 text-[13px] text-[var(--accent)]">
       <CheckIcon size={14} /> {s.confirmed}: <span className="font-semibold">{displayValue(field, fs.value, lang, labels.t)}</span>
@@ -155,6 +160,18 @@ function Provenance({ origin, quote, s }: { origin: "claude" | "navigator" | "tr
   );
 }
 
+/**
+ * Guardrail 3, checked again right before rendering: a drafted number is only
+ * shown if it appears in its quote. Typed values have no quote to check.
+ */
+function pendingNumbersOk(field: FormField, p: PendingValue): boolean {
+  return p.origin !== "claude" || numbersCheckOut(field, p.value, p.quote ?? "", p.math);
+}
+
+function confirmedNumbersOk(field: FormField, fs: FieldState): boolean {
+  return fs.source?.kind !== "transcript" || numbersCheckOut(field, fs.value, fs.source.quote, fs.source.math);
+}
+
 /* ---------------- Navigator ---------------- */
 
 function NavigatorField({ field, fs, inputId, s, labels }: { field: FormField; fs: FieldState; inputId: string; s: UiStrings; labels: Labels }) {
@@ -166,7 +183,9 @@ function NavigatorField({ field, fs, inputId, s, labels }: { field: FormField; f
     dispatch({ type: "PROPOSE_VALUE", fieldId: field.id, pending: { value, origin: "navigator", unclear: false, ask: "" } });
   };
   const p = fs.pending;
-  const shown = p ? displayValue(field, p.value, "en", labels.t) : "";
+  const numbersOk = p ? pendingNumbersOk(field, p) : true;
+  const shown = p && numbersOk ? displayValue(field, p.value, "en", labels.t) : "";
+  const blocked = !!p && (p.unclear || !numbersOk);
 
   return (
     <div className="space-y-2">
@@ -175,7 +194,7 @@ function NavigatorField({ field, fs, inputId, s, labels }: { field: FormField; f
       <ConfirmedValue field={field} fs={fs} lang="en" labels={labels} s={s} />
 
       {p && (
-        <div className={`inset-box space-y-2.5 ${p.unclear ? "bg-[var(--warn-soft)]" : "bg-[var(--fill)]"}`}>
+        <div className={`inset-box space-y-2.5 ${blocked ? "bg-[var(--warn-soft)]" : "bg-[var(--fill)]"}`}>
           <div className="flex flex-wrap items-center gap-2">
             <span className="chip bg-[var(--surface)] text-[var(--fg-muted)]">
               {p.origin === "claude" && <SparkleIcon size={12} />}
@@ -183,9 +202,13 @@ function NavigatorField({ field, fs, inputId, s, labels }: { field: FormField; f
             </span>
             <span className="text-[17px] font-semibold">{shown ? <Highlighted text={shown} lang="en" /> : "—"}</span>
           </div>
-          {p.math && <p className="text-[13px] text-[var(--fg-muted)]">{p.math}</p>}
+          {p.math && numbersOk && <p className="text-[13px] text-[var(--fg-muted)]">{p.math}</p>}
           <Provenance origin={p.origin} quote={p.quote} s={s} />
-          {p.unclear ? (
+          {!numbersOk ? (
+            <p className="flex items-start gap-1.5 text-[13px] font-medium text-[var(--danger)]">
+              <AlertIcon size={14} className="mt-0.5 shrink-0" /> {ASK.number_unverified}
+            </p>
+          ) : p.unclear ? (
             <p className="flex items-start gap-1.5 text-[13px] font-medium text-[var(--warn)]">
               <AlertIcon size={14} className="mt-0.5 shrink-0" /> {s.unclearAsk} {p.ask}
             </p>
@@ -209,7 +232,7 @@ function NavigatorField({ field, fs, inputId, s, labels }: { field: FormField; f
                 {s.askAgain}
               </button>
             ) : (
-              <button type="button" disabled={!canConfirm(fs)} onClick={() => dispatch({ type: "NAVIGATOR_CONFIRM", fieldId: field.id })} className="btn btn-sm btn-primary">
+              <button type="button" disabled={!canConfirm(fs) || !numbersOk} onClick={() => dispatch({ type: "NAVIGATOR_CONFIRM", fieldId: field.id })} className="btn btn-sm btn-primary">
                 <CheckIcon size={14} /> {s.confirm}
               </button>
             )}
@@ -244,7 +267,7 @@ function NeighborField({
   const p = fs.pending;
 
   if (!p) {
-    const shown = fs.confirmed ? displayValue(field, fs.value, lang, labels.t) : "";
+    const shown = fs.confirmed && confirmedNumbersOk(field, fs) ? displayValue(field, fs.value, lang, labels.t) : "";
     return shown ? (
       <output id={inputId} className="flex items-center gap-1.5 text-[17px] font-semibold">
         <CheckIcon size={16} className="text-[var(--accent)]" /> {shown}
@@ -256,12 +279,13 @@ function NeighborField({
     );
   }
 
-  const shown = displayValue(field, p.value, lang, labels.t);
+  const numbersOk = pendingNumbersOk(field, p);
+  const shown = numbersOk ? displayValue(field, p.value, lang, labels.t) : "";
   return (
     <div id={inputId} className="inset-box space-y-3 bg-[var(--fill)]">
       <p className="text-[20px] font-semibold leading-snug">{shown ? <Highlighted text={shown} lang={lang} /> : "—"}</p>
       <Provenance origin={p.origin} quote={p.quote} s={s} />
-      {p.unclear ? (
+      {p.unclear || !numbersOk ? (
         <p className="text-[13px] text-[var(--fg-muted)]">{s.navigatorWillAsk}</p>
       ) : (
         <div className="flex flex-wrap items-center gap-2">
