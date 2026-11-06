@@ -12,7 +12,7 @@ export function Conversation({ viewer, footnote }: { viewer: Speaker; footnote?:
   const s = ui(langFor(viewer));
   return (
     <div>
-      <h3 className="group-title">{s.conversation}</h3>
+      <h3 className="module-title">{s.conversation}</h3>
       <div className="card overflow-hidden">
         <Transcript viewer={viewer} />
         <div className="border-t border-[var(--separator)] p-3">

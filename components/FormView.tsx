@@ -32,7 +32,7 @@ export function FormView({ viewer }: { viewer: Speaker }) {
   return (
     <div className="space-y-6">
       <div className="space-y-1 px-1">
-        <p className="text-[13px] font-medium uppercase tracking-wide text-[var(--fg-muted)]">{s.form}</p>
+        <h2 className="module-title !px-0 !pb-1">{s.form}</h2>
         <h3 className="text-[22px] font-bold leading-tight tracking-tight">{labels.t("title", form.title)}</h3>
         <p className="text-[13px] text-[var(--fg-muted)]">{labels.t("disclaimer", form.disclaimer)}</p>
         <p className="text-[12px] text-[var(--fg-muted)]">{s.doubleTapHint}</p>
