@@ -11,7 +11,13 @@ Prototype for Mid-Ohio Food Collective: shared-screen English/Spanish translatio
 - **Form values never go to Claude.** Only conversation lines (translate + draft) and form labels.
 - **Never auto-submit.** Submit requires every required field confirmed and nothing pending (`submitReadiness` in `lib/session/reducer.ts`).
 - **Only the navigator confirms.** The neighbor's only form action is Sí/No on a pending value. Navigator Confirm needs a Sí and a draft that isn't unclear (`canConfirm`). A new value clears the neighbor's answer. Keep the unit tests for this passing.
-- **Drafts never guess.** Claude drafts only values actually said; unit conversion happens in `lib/draft/normalize.ts`, not in the model. Unclear period or gross/net means `unclear` plus a question for the navigator.
+- **Accuracy guardrails must hold** (see README, "Draft"):
+  - UNCLEAR is decided in code, never from model confidence.
+  - Money is stored as stated, with no conversion.
+  - Every drafted value has a verified quote, and its numbers must appear in it (`lib/verify/numbers.ts`, checked on the server and before render).
+  - The neighbor's No is final for that value.
+  - Don't add a way to confirm an UNCLEAR, unquoted or unverified value.
+- The extraction prompt lives in `prompts/extraction.md`; change it there.
 - **Voice:** the speaker always reviews the transcript before translation. Never auto-translate speech, never store audio or transcripts beyond the in-memory session.
 - **Translator stays a translator.** The prompt in `lib/translate/prompt.ts` forbids advice and eligibility judgments. Don't loosen that.
 - **Glossary is authoritative.** Approved terms in `lib/glossary/<lang>.json` must be used. Keep the system prompt independent of the message so it stays cacheable.

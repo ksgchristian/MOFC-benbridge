@@ -56,17 +56,20 @@ tests/                        Vitest unit tests + live evals (translate.eval.ts,
 1. **Speak or type.** Each side has its own mic: navigator `en-US`, neighbor `es-US`. The button tells the app who is speaking; there's no language auto-detection.
 2. **Check the transcript.** It shows up editable, with numbers, how-often words and gross/net words highlighted. **Re-record**, **Translate** or **Cancel**. Nothing is translated until the speaker taps Translate.
 3. **Translate.** `SessionContext.sendMessage` → `/api/translate` → Claude with the approved terms → both panes update.
-4. **Draft.** The same line goes to `/api/draft`. Claude reports only values that were actually said: amounts *as stated*, with how often and gross/net. `lib/draft/normalize.ts` converts to monthly in code. If how often or gross/net wasn't said, the draft is marked **unclear** with the question the navigator should ask.
-5. **Neighbor Sí/No.** Each drafted (or navigator-typed) value shows on the neighbor side, highlighted, with Sí / No.
-6. **Navigator Confirm.** Only the navigator can confirm, and only after a Sí on a draft that isn't unclear. Submit (mock) needs every required field confirmed and nothing pending.
+4. **Draft, with four accuracy guardrails** (the risk is a fluent but wrong value, e.g. net entered as gross):
+   1. **Strict schema** (`prompts/extraction.md`, `lib/draft/schema.ts`). Money always carries `income_period` and `income_type`, and `UNCLEAR` is a valid value. Nothing is inferred: "no trabajo ahora" means no amount, never 0. "Quincenal" is always UNCLEAR (24 vs 26 pay periods). "About"/"como" is UNCLEAR. Household parts are added up in code and shown ("3 adults + 2 children = 5"). Whether something is unclear is decided in code (`lib/draft/normalize.ts`), never by the model's own confidence.
+   2. **Provenance.** Every drafted value carries the exact words it came from, checked in code against the line, and shown under the value (`← "…"`). No quote means no value. Typed values say "Entered by navigator" instead, in the UI and in the record.
+   3. **Number check in code** (`lib/verify/numbers.ts`). A number is shown only if it appears in its quote, as digits or as Spanish/English words. This runs on the server and again in the browser before rendering.
+   4. **Read-back question** (`lib/glossary/readback.json`). The neighbor sees "¿Gana **$2,100 al mes**, antes de impuestos?" with Sí / No. **No is final** for that value; only a new answer (said again or re-typed) moves on.
+5. **Navigator Confirm.** Only the navigator can confirm, and only after a Sí on a complete, verified value. Submit (mock) needs every required field confirmed and nothing pending.
 
 ### Design decisions worth knowing
 
 - **What goes to Claude.** Conversation lines (for translation and drafting) and form *labels*. Form values the navigator types are never sent. Choices show as their translated option labels.
 - **Two keys to every value.** The neighbor answers Sí/No, and only the navigator confirms. Any new value clears the neighbor's answer. Submit is a mock: nothing is sent anywhere.
-- **Math in code, not in the model.** Claude never converts weekly to monthly; `normalize.ts` does, so the arithmetic is testable.
+- **Money is stored as stated** (amount + how often, e.g. `500/weekly`). Nothing is converted to monthly: the agency's factor (exact 52/12 vs SNAP's 4.3 / 2.15) isn't confirmed for our form. Open question for MOFC.
 - **Glossary wins.** Terms in `lib/glossary/es.json` must be used as written. Hand-written Spanish labels in the form also beat machine translation. Machine-translated labels show an "AI" tag.
-- **Uncertainty is surfaced.** When Claude isn't sure (ambiguous wording, possible mishearing), the line gets an amber outline, and the navigator sees an English note explaining why.
+- **No self-reported confidence in the UI.** The translator's "not sure" flag is logged server-side (flag only) and printed by the evals, but never shown: a warning that doesn't block teaches people to ignore warnings.
 - **Flags → glossary.** Flags export as JSON. Staff review them and add good corrections to the glossary. Add a case to `tests/translate.eval.ts` for each real mistake.
 - **No storage.** Session state lives in browser memory and is gone on reload. The server never logs message text.
 - **Voice.** It uses the browser's speech recognition through `lib/speech/types.ts`, so the provider can be swapped. Use desktop **Chrome** (Edge also works). Firefox has no speech recognition, so it shows a message and falls back to typing. In Chrome, audio is processed by Google's speech service; the app never stores audio, and transcripts live only in the in-memory session. `NEXT_PUBLIC_SPEECH_PROVIDER=none` gives text-only mode.
