@@ -1,0 +1,54 @@
+{
+  "_note": "Marker words that SUPPORT an income qualifier in what the speaker said. A qualifier (gross/net, how often) is only accepted if one of its markers is in the quote and no marker for a different value is. Matching ignores case and accents and uses whole words; longer phrases win over shorter ones inside them ('dos veces al mes' is twice a month, not 'al mes'). DRAFT: needs review by a bilingual navigator at MOFC; set reviewed to true once approved. Don't add 'quincena'/'quincenal'/'cada quince dias' to any period: they are always UNCLEAR.",
+
+  "income_type": {
+    "gross": {
+      "reviewed": false,
+      "es": [
+        "antes de impuestos", "antes de los impuestos", "antes de taxes", "antes de los taxes",
+        "antes de descuentos", "antes de los descuentos", "antes de deducciones", "antes de las deducciones",
+        "bruto", "brutos", "bruta", "brutas", "en bruto", "sin descontar", "sin descuentos"
+      ],
+      "en": ["before taxes", "before tax", "pre-tax", "pretax", "gross", "before deductions"]
+    },
+    "net": {
+      "reviewed": false,
+      "es": [
+        "después de impuestos", "después de los impuestos", "después de taxes", "después de los taxes",
+        "después de descuentos", "después de los descuentos", "después de deducciones", "después de las deducciones",
+        "ya con descuentos", "ya descontado", "neto", "netos", "neta", "netas",
+        "me quedan", "me queda", "me queda libre", "me quedan libres", "en limpio", "limpio", "limpios",
+        "lo que me llevo a casa", "me llevo a casa", "llevo a casa"
+      ],
+      "en": ["after taxes", "after tax", "take-home", "take home", "net", "after deductions"]
+    }
+  },
+
+  "income_period": {
+    "weekly": {
+      "reviewed": false,
+      "es": ["a la semana", "por semana", "cada semana", "semanal", "semanales", "semanalmente"],
+      "en": ["a week", "per week", "each week", "every week", "weekly"]
+    },
+    "biweekly": {
+      "reviewed": false,
+      "es": ["cada dos semanas", "cada 2 semanas", "cada otra semana"],
+      "en": ["every two weeks", "every 2 weeks", "every other week", "biweekly", "bi-weekly"]
+    },
+    "semimonthly": {
+      "reviewed": false,
+      "es": ["dos veces al mes", "2 veces al mes", "dos veces por mes", "2 veces por mes"],
+      "en": ["twice a month", "two times a month", "semimonthly", "semi-monthly"]
+    },
+    "monthly": {
+      "reviewed": false,
+      "es": ["al mes", "por mes", "cada mes", "mensual", "mensuales", "mensualmente"],
+      "en": ["a month", "per month", "each month", "every month", "monthly"]
+    },
+    "annual": {
+      "reviewed": false,
+      "es": ["al año", "por año", "cada año", "anual", "anuales", "anualmente"],
+      "en": ["a year", "per year", "each year", "every year", "yearly", "annually", "annual"]
+    }
+  }
+}

@@ -63,7 +63,11 @@ export type UnclearReason =
   | "number"
   | "date"
   | "no_source"
-  | "number_unverified";
+  | "number_unverified"
+  | "period_unsupported"
+  | "period_contradicted"
+  | "type_unsupported"
+  | "type_contradicted";
 
 /** A draft after the code checks, ready to propose into the form. */
 export interface FieldDraft {

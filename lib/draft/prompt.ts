@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { allFields, type FormField, type FormSchema } from "@/lib/forms/schema";
 import { LANGUAGES, type LangCode } from "@/lib/languages";
+import { allQualifierEntries } from "@/lib/verify/qualifiers";
 import type { DraftRequest } from "./schema";
 
 /**
@@ -36,9 +37,18 @@ function describeField(f: FormField): string {
   }
 }
 
+/** The same marker words the code checks against (lib/glossary/qualifiers.json): one list. */
+function qualifierMarkersForPrompt(): string {
+  return allQualifierEntries()
+    .map(({ kind, value, entry }) => `  - ${kind} = ${value}: ${[...entry.es, ...entry.en].map((w) => `"${w}"`).join(", ")}`)
+    .join("\n");
+}
+
 /** Stable per form (cacheable): depends only on the form, never on the message. */
 export function buildDraftSystemPrompt(form: FormSchema): string {
-  return extractionTemplate().replace("{{FIELDS}}", allFields(form).map(describeField).join("\n"));
+  return extractionTemplate()
+    .replace("{{FIELDS}}", allFields(form).map(describeField).join("\n"))
+    .replace("{{QUALIFIER_MARKERS}}", qualifierMarkersForPrompt());
 }
 
 export function buildDraftUserMessage(req: Pick<DraftRequest, "speaker" | "lang" | "text" | "context">): string {

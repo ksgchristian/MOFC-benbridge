@@ -15,6 +15,7 @@ Prototype for Mid-Ohio Food Collective: shared-screen English/Spanish translatio
   - UNCLEAR is decided in code, never from model confidence.
   - Money is stored as stated, with no conversion.
   - Every drafted value has a verified quote, and its numbers must appear in it (`lib/verify/numbers.ts`, checked on the server and before render).
+  - Gross/net and how often must be backed by marker words in the quote (`lib/verify/qualifiers.ts`). Contradicted or unsupported means UNCLEAR. Edit the words in `lib/glossary/qualifiers.json`, not in code or the prompt.
   - The neighbor's No is final for that value.
   - Don't add a way to confirm an UNCLEAR, unquoted or unverified value.
 - The extraction prompt lives in `prompts/extraction.md`; change it there.

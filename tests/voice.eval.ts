@@ -79,6 +79,7 @@ const CASES: Case[] = [
   { name: "'about' → unclear", speaker: "neighbor", lang: "es", transcript: "gano como dos mil al mes antes de impuestos", checks: [unclear("grossIncome", "approximate")] },
   { name: "quincena → unclear (24 vs 26)", speaker: "neighbor", lang: "es", transcript: "me pagan mil la quincena antes de impuestos", checks: [unclear("grossIncome", "quincena")] },
   { name: "no work → never 0", speaker: "neighbor", lang: "es", transcript: "no trabajo ahora", checks: [notClear("grossIncome"), never("grossIncome", "0")] },
+  { name: "take-home dialect ('me quedan') goes to net", speaker: "neighbor", lang: "es", transcript: "me quedan mil ochocientos cincuenta al mes", checks: [value("netIncome", "1850/monthly"), notClear("grossIncome")] },
   { name: "after taxes goes to net, not gross", speaker: "neighbor", lang: "es", transcript: "mil ochocientos cincuenta al mes después de impuestos", checks: [value("netIncome", "1850/monthly"), notClear("grossIncome")] },
   {
     name: "short answer uses context",

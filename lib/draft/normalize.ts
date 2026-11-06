@@ -1,6 +1,7 @@
 import { encodeMoney, type Period } from "@/lib/forms/money";
 import { allFields, type FormField, type FormSchema } from "@/lib/forms/schema";
 import { numbersCheckOut } from "@/lib/verify/fieldNumbers";
+import { verifyQualifier } from "@/lib/verify/qualifiers";
 import type { FieldDraft, ModelDraft, UnclearReason } from "./schema";
 
 /**
@@ -21,6 +22,10 @@ export const ASK: Record<UnclearReason, string> = {
   date: "Ask for the full date (day, month and year).",
   no_source: "Ask again: this answer couldn't be matched to the exact words that were said.",
   number_unverified: "Ask again: the number couldn't be found in what was said. Don't enter it until you hear it again.",
+  period_unsupported: "Ask: how often is that paid? Nothing in what was said says (like “al mes” or “a la semana”).",
+  period_contradicted: "Ask: how often is that paid? What was said doesn't match the period that was filled in.",
+  type_unsupported: "Ask: is that before taxes (gross) or after taxes (net)? Nothing in what was said says.",
+  type_contradicted: "Ask: before or after taxes? What was said points the other way (for example “después de impuestos”).",
 };
 
 /** Words that mean the amount is approximate. Checked in code, not by the model. */
@@ -51,13 +56,29 @@ function normalizeMoney(field: MoneyField, d: ModelDraft, form: FormSchema, evid
   const value = encodeMoney(d.income_amount, period);
 
   // A missing qualifier is UNCLEAR, never a default. List every question the navigator needs to ask.
+  // A qualifier the model gave must also be backed by marker words in the quote, exactly like a
+  // number: a contradicting marker OR no marker at all means UNCLEAR (lib/verify/qualifiers.ts).
   const reasons: UnclearReason[] = [];
+  const quote = d.source_span;
   const quincena = QUINCENA.test(evidence);
+  let periodOk = false;
   if (quincena) reasons.push("quincena");
   else if (!period) reasons.push("period");
-  if (field.basis && (d.income_type == null || d.income_type === "UNCLEAR")) reasons.push("income_type");
+  else {
+    const check = verifyQualifier("income_period", period, quote);
+    if (check === "supported") periodOk = true;
+    else reasons.push(check === "contradicted" ? "period_contradicted" : "period_unsupported");
+  }
+  if (field.basis) {
+    if (d.income_type == null || d.income_type === "UNCLEAR") reasons.push("income_type");
+    else {
+      const check = verifyQualifier("income_type", d.income_type, quote);
+      if (check !== "supported") reasons.push(check === "contradicted" ? "type_contradicted" : "type_unsupported");
+    }
+  }
   if (APPROX.test(evidence)) reasons.push("approximate");
-  if (reasons.length) return unclear(field.id, quincena ? encodeMoney(d.income_amount, null) : value, reasons);
+  // Never show a period that the words don't back up.
+  if (reasons.length) return unclear(field.id, periodOk ? value : encodeMoney(d.income_amount, null), reasons);
   return { fieldId: field.id, value, unclear: false, ask: "", quote: "" };
 }
 

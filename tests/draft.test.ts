@@ -138,7 +138,7 @@ describe("guardrail 2: provenance", () => {
   });
 
   it("matches the quote ignoring only case and spacing", () => {
-    expect(g("gano  2,100 AL MES")[0]).toMatchObject({ unclear: false, quote: "gano  2,100 AL MES" });
+    expect(g("gano  2,100 AL MES ANTES DE IMPUESTOS")[0]).toMatchObject({ unclear: false, quote: "gano  2,100 AL MES ANTES DE IMPUESTOS" });
   });
 
   it("no quote, or a quote that isn't in the line, means UNCLEAR and no value shown", () => {
@@ -180,5 +180,39 @@ describe("guardrail 3: numbers must appear in the quote", () => {
   it("a plain household total must be said", () => {
     const line = "somos tres";
     expect(normalizeDrafts([{ ...d("householdSize", { household_size: 4 }), source_span: line }], form, line)[0]).toMatchObject({ value: "", reason: "number_unverified" });
+  });
+});
+
+describe("guardrail 1b: qualifiers must be backed by the words in the quote", () => {
+  const q = (line: string, type: ModelDraft["income_type"], period: ModelDraft["income_period"], amount = 1850, field = "grossIncome") =>
+    normalizeDrafts([{ ...income(field, amount, period, type), source_span: line }], form, line)[0];
+
+  it("contradiction: model says gross, quote says after taxes → UNCLEAR", () => {
+    expect(q("gano 1850 al mes después de impuestos", "gross", "monthly")).toMatchObject({ fieldId: "grossIncome", unclear: true, reason: "type_contradicted" });
+  });
+
+  it("no marker: a gross label with nothing behind it → UNCLEAR", () => {
+    expect(q("gano 1850 al mes", "gross", "monthly")).toMatchObject({ unclear: true, reason: "type_unsupported", value: "1850/monthly" });
+  });
+
+  it("period contradiction and period with no marker → UNCLEAR, and the period isn't shown", () => {
+    expect(q("gano 1850 a la semana antes de impuestos", "gross", "monthly")).toMatchObject({ unclear: true, reason: "period_contradicted", value: "1850" });
+    expect(q("gano 1850 antes de impuestos", "gross", "monthly")).toMatchObject({ unclear: true, reason: "period_unsupported", value: "1850" });
+  });
+
+  it("'dos veces al mes' supports twice a month, and contradicts monthly", () => {
+    expect(q("gano mil dos veces al mes antes de impuestos", "gross", "semimonthly", 1000)).toMatchObject({ value: "1000/semimonthly", unclear: false });
+    expect(q("gano mil dos veces al mes antes de impuestos", "gross", "monthly", 1000)).toMatchObject({ reason: "period_contradicted" });
+  });
+
+  it("dialect take-home phrases support net", () => {
+    for (const line of ["me quedan 1850 al mes", "me queda libre 1850 al mes", "en limpio 1850 al mes", "lo que me llevo a casa son 1850 al mes", "1850 al mes después de descuentos"]) {
+      expect(q(line, "net", "monthly", 1850, "netIncome")).toMatchObject({ fieldId: "netIncome", value: "1850/monthly", unclear: false });
+    }
+  });
+
+  it("rent: period must be backed by words, gross/net not needed", () => {
+    expect(q("pago 950 al mes de renta", null, "monthly", 950, "rent")).toMatchObject({ value: "950/monthly", unclear: false });
+    expect(q("pago 950 de renta", null, "monthly", 950, "rent")).toMatchObject({ unclear: true, reason: "period_unsupported" });
   });
 });
